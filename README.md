@@ -1,2 +1,2 @@
 # Proxyman_scripts
-Полезные скрипты и библиотеки для Proxyman Scripting tool.
+Полезные скрипты и библиотеки(в разработке) для Proxyman Scripting tool.
