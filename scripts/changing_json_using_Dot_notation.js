@@ -27,7 +27,6 @@ function changingJSON(arrayChangesParams, body) {
   return body;
 }
 
-
 sharedState.changeJSON = [{path: "items.0.route.type", value: "rating"}, {path: "items.1.route.type", value: null}]
 let body = {
   "items": [
@@ -48,6 +47,7 @@ let body = {
   ],
   "message": "It`s ok request"
 }
+
 // Calling a function and entering replacement parameters 
 // Вызов функции и ввод параметров замены
 let newBody = changingJSON(sharedState.changeJSON, body)
