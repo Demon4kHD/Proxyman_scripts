@@ -20,9 +20,9 @@ function changingJSON(arrayChangesParams, body) {
               currentBody = currentBody[key];
           } else {
               currentBody[key] = paramsValue[i];
-          }
-      }
-  }
+            }
+        }
+    }
 
   return body;
 }
