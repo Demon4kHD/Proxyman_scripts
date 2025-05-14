@@ -134,3 +134,7 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+.code-workspace
+Proxyman Scripts.code-workspace
+.gitignore
