@@ -27,7 +27,11 @@ function changingJSON(arrayChangesParams, body) {
   return body;
 }
 
+// Пример данных для замены
+
 sharedState.changeJSON = [{path: "items.0.route.type", value: "rating"}, {path: "items.1.route.type", value: null}]
+
+// Пример изменяемого объекта
 let body = {
   "items": [
     {
