@@ -20,7 +20,7 @@ function changingJSON(arrayChangesParams, body) {
               currentBody = currentBody[key];
           } else {
               currentBody[key] = paramsValue[i];
-            }
+          }
         }
     }
 
@@ -29,7 +29,10 @@ function changingJSON(arrayChangesParams, body) {
 
 // Пример данных для замены
 
-sharedState.changeJSON = [{path: "items.0.route.type", value: "rating"}, {path: "items.1.route.type", value: null}]
+sharedState.changeJSON = [
+  {path: "items.0.route.type", value: "rating"}, 
+  {path: "items.1.route.type", value: null}
+]
 
 // Пример изменяемого объекта
 let body = {
@@ -39,17 +42,25 @@ let body = {
         "type": "order", 
         "orderId": 123456
       },
-      "link": "ya.ru"
+      "link": "yandex.ru"
     }, 
     {
       "route": {
         "type": "rating", 
         "orderId": 123456
       },
-      "link": "ya.ru"
+      "link": "yandex.ru"
     }
   ],
-  "message": "It`s ok request"
+  "message": "It`s ok request",
+  "testArray": [
+    {
+      "id": 123
+    }, 
+    {
+      "id": 234
+    }
+  ]
 }
 
 // Calling a function and entering replacement parameters 
