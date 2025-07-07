@@ -70,10 +70,14 @@ let body = {
 
 let script = {
     'сomplexSearch': [{
-        triggerPath: 'first.second.trigger', 
-        trigger: 'searchValue', 
-        changingParameterPath : 'first.second.third.ChangingParameter',
-        changingValue: 'newValue'
+        target: {
+            path : 'first.second.third.ChangingParameter',
+            value: 'newValue'
+        },
+        trigger: {
+            path: 'first.second.trigger',
+            value: 'searchValue'
+        }
     }]
 }
 
@@ -98,9 +102,9 @@ Object.prototype.operatorFactory = function(operator, obj, key, value){
     }
 }
 
-Object.prototype.workWithArray = function(){
+// Object.prototype.workWithArray = function(){
 
-}
+// }
 
 Object.prototype.useHandler = function(){
     let currentTarget = this.target

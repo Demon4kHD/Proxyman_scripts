@@ -1,108 +1,122 @@
+const ENV = {
+    allArray: '@all',
+    operators: [
+        'comment', 'changeValue', 'deleteParameter', 'searchAndComment', 'searchAndChange', 'searchAndDelete'
+    ],
+    errorColor: 'red',
+    nonFatalErrorColor: 'yellow',
+    nonFatalErrorMessageArray: ['В объекте', 'отсутствует параметр', '\nПроверьте JSON и сценарий или проигнорируйте'],
+    errorMessageArray: ['Ошибка: В объекте', 'отсутсвтует обязательный элемент']
+}
+
 function HandlerForEditingObject(target, script){
     this.target = {...target}
+    this.script = script
+    this.color = ''
     this.comment = ''
-    this.operators = [
-        'comment', 'changeValue', 'deleteParameter', 'сomplexSearch'
-    ]
+    this.scriptOperatorsArray = Object.getOwnPropertyNames(this.script)
+    
+    // this.areTheseDependentScripts = function(operator){
+    //     let dependentScripts = ['searchAndComment', 'searchAndChange']
 
-    this.getTarget = function(){
-        return this.target
+    //     return dependentScripts.includes(operator)
+    // }
+
+    // this.doesThisScriptValue = function(operator){
+    //     let opreatorsWithValue = ['changeValue', 'searchAndChange']
+
+    //     return opreatorsWithValue.includes(operator)
+    // }
+
+    this.arrayHandler = function(operator, target, script){
+        //
     }
 
-    this.convertScript = function(script){
-        let result = {}
-        for (let element in script){
-            let newElement = {}
-            let newArrayChangesParams = []
-            let paramsValue = []
-
-            for (let arrayElement of script[element]){
-                newArrayChangesParams.push(arrayElement.path.split('.').map(element => {
-                    return isNaN(element) ? element : Number(element)
-                }));
-                
-                if (arrayElement.value !== undefined){
-                    paramsValue.push(arrayElement.value)
-                }
-            }
-
-            newElement['paths'] = newArrayChangesParams
-
-            if (paramsValue.length !== 0){
-                newElement['values'] = paramsValue
-            }
-
-            result[element] = newElement
-        }
-
-        return result
+    this.objectHandler = function(operator, target, script){
+        
     }
 
-    this.transformedScript = this.convertScript(script)
-    this.witchScriptUse = Object.getOwnPropertyNames(this.transformedScript)
+    this.isThisRightValue = function(target, path, value){
+        let currentTarget = target
 
-    this.addComment = function(obj, key){
-        this.comment += `${key}: ${obj[key]}\n`
-        return this
+
     }
 
-    this.deleteParamsForJSON = function(obj, key){
-        delete obj[key]
-        this.addComment(obj, key)
-        return this
-    }
-
-    this.setNewValueForParams = function(obj, key, value){
-        obj[key] = value
-        this.addComment(obj, key)
-        return this
-    }
-
-    this.operatorFactory = function(operator, obj, key, value){
-        switch (operator) {
-            case 'change':
-                return this.setNewValueForParams(obj, key, value)
-            case 'delete':
-                return this.deleteParamsForJSON(obj, key)
-            case 'show':
-                return this.addComment(obj, key)
-            default:
-                throw new Error(`Недопустимый тип: ${operator}`);
-        }
-    }
-
-    this.useScriptForParamsInJSON = function(){
+    this.operatorsMainFactory = function(){
         let currentTarget = this.target
         
-        for (let operation of this.witchScriptUse){
-            let paths = this.transformedScript[operation]["paths"]
-            let values = this.transformedScript[operation]["values"] ?? null
+        // Перебираем все операторы сценария
+        for (let operator of this.scriptOperatorsArray){
+            // Перебираем список объектов с параметрами сценария
+            for (let item of script[operator]){
+                let targetPath = item.target.path
+                let targetValue = item.target.value ? item.target.value : null
+                let triggerPath = item.trigger && item.trigger.path ? item.trigger.path : null
+                let triggerValue = item.trigger && item.trigger.value ? item.trigger.value : null
 
-            for (let i = 0; i < paths.length; i ++){
-                let tempTarget = currentTarget
-                let path = paths[i]
-                let value = values ? values[i] : null
-
-                for (let j = 0; j < path.length; j++){
-                    const key = path[j]
-                    
-                    if (j === path.length - 1){
-                        tempTarget = this.operatorFactory(operation, tempTarget, key, value)
-                    }
-                    else {
-                        if (!tempTarget[key]){
-                            tempTarget = this.operatorFactory(operation, tempTarget, key, value)
-                        }
-                        tempTarget = tempTarget[key]
-                    } 
+                switch (operator) {
+                    case 'comment':
+                        this.addComment(obj, key)
+                    case 'change':
+                        this.setNewValueForParams(obj, key, value)
+                    case 'delete':
+                        this.deleteParamsForJSON(obj, key)
+                    case 'сomplexSearch':
+                        this.сomplexSearchForObjectWithRequiredValue(obj, script)
+                    default:
+                        throw new Error(`Недопустимый тип: ${operator}`);
                 }
             }
         }
-
-        return this.target
     }
+
+    this.operatorsMainFactory(this.target, this.script)
 }
 
-module.exports = {
-  HandlerForBodyObject
+// module.exports = {
+//   HandlerForEditingObject
+// }
+
+let body = {
+    "first": {
+        "second": {
+            "trigger": "searchValue",
+            "third": {
+                "ChangingParameter": "value"
+            }
+        },
+        'secondArray': [
+            {
+                "changeThis": 12
+            },
+            {
+                "changeThis": 15
+            }
+        ]
+    } 
 }
+
+let script = {
+    'searchAndChange': [
+        {
+            'target': {
+                path : ['first', 'second', 'third', 'ChangingParameter'],
+                value: 'newValue'
+            },
+            'trigger': {
+                path: ['first', 'second', 'trigger'],
+                value: 'searchValue'
+            }
+        }
+    ],
+    'changeValue': [
+        {
+            'target': {
+                path: ['first', 'secondArray', '@all', 'changeThis'],
+                value: 99
+            }
+        }
+    ]
+}
+
+let test = new HandlerForEditingObject(body, script)
