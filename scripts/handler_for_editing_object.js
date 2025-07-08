@@ -102,9 +102,9 @@ Object.prototype.operatorFactory = function(operator, obj, key, value){
     }
 }
 
-// Object.prototype.workWithArray = function(){
+Object.prototype.workWithArray = function(){
 
-// }
+}
 
 Object.prototype.useHandler = function(){
     let currentTarget = this.target

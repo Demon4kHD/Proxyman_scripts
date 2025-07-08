@@ -1,7 +1,13 @@
 const ENV = {
     allArray: '@all',
     operators: [
-        'addComment', 'changeValue', 'deleteParameter', 'searchAndComment', 'searchAndChange', 'searchAndDelete'
+        'viewParams', 'changeValue', 'deleteParameter', 'searchAndView', 'searchAndChange', 'searchAndDelete', 'searchAndCheck'
+    ],
+    scriptsWithTrigger: [
+        'searchAndComment', 'searchAndChange', 'searchAndDelete'
+    ],
+    scriptsWithValue: [
+        'changeValue', 'searchAndChange', 'searchAndCheck'
     ],
     errorColor: 'red',
     nonFatalErrorColor: 'yellow',
@@ -9,42 +15,108 @@ const ENV = {
     errorMessageArray: ['Ошибка: В объекте', 'отсутсвтует обязательный элемент']
 }
 
-function HandlerForEditingObject(target, script){
-    this.target = {...target}
+function HandlerForEditingObject(data, script){
+    this.data = {...data}
     this.script = script
-    this.color = 'red'
+    this.color = ''
     this.comment = ''
     this.errorMassages = []
-    this.scriptOperatorsArray = Object.getOwnPropertyNames(this.script)
-
-    this.searchParamAndGetValue = function(){
-        //
-    }
 
     this.addErrorMessage = function(type, element, textMessages){
-        let message = {
-            'type': type, // Non-Fatal, Warning
-            'element': element,
-            'text': textMessages
+        this.errorMessages.push({
+            type: type,
+            element: element,
+            text: textMessages
+        })
+    }
+
+    this.getErrorMessages = function(){
+        return this.errorMassages
+    }
+
+    this.setColor = function(color){
+        this.color = color
+    }
+
+    this.getColor = function(){
+        return this.color
+    }
+
+    this.addComment = function(message){
+        // Надо переделать!!!
+        this.comment += `${message}\n`
+    }
+
+    this.createCommentText = function(...params){
+        // Надо переделать!!!
+        this.addComment(params)
+    }
+
+    this.getComment = function(){
+        return this.comment
+    }
+
+    this.getData = function(){
+        return this.data
+    }
+
+    this.doesOperatorHaveTrigger = function(operator){
+        return ENV.scriptsWithTrigger.includes(operator)
+    }
+
+    this.doesOperatorHaveValue = function(operator){
+        return ENV.scriptsWithValue.includes(operator)
+    }
+
+    this.preparingParameters = function(item, operator){
+        let result = {}
+
+        // Базовая конфигурация
+        result.target = {
+            path: item.target.path
         }
 
-        this.errorMassages.push(message)
+        // Добавляем value, если необходимо
+        if (this.doesOperatorHaveValue(operator)) {
+            if (!item || !item.target || !item.target.value) {
+                throw new Error("Отсутствует target.value в параметрах")
+            }
+
+            result.target.value = item.target.value
+        }
+
+        // Добавляем trigger, если необходимо
+        if (this.doesOperatorHaveTrigger(operator)) {
+            if (!item.trigger) {
+                throw new Error("Отсутствует trigger в параметрах или его дочерние параметры")
+            }
+            result.trigger = {
+                path: item.trigger.path,
+                value: item.trigger.value
+            }
+        }
+
+        return result
     }
 
 
-    // Требует доработки
-    this.addComment = function(key, value){
-        this.comment += this.errorMassage == [] ? `${key}: ${value}\n` : `${this.errorMassage[0]}: ${this.errorMassage[1]} - ${this.errorMassage[2]}`
-        this.color = this.errorMassage == [] ? 'green' : value == 'Недопустимый тип оператора!' ? 'red' : 'yellow'
+    this.viewParams = function(params){
+        // Надо переделать!!!
+        let paths = params.target.path
+
+        let [key, value] = this.objectHandler(this.getData(), paths)
+
+        this.addComment(this.createCommentText(...[`${key}: ${value}`]))
     }
 
-    this.changeValue = function(obj, key, value){
-        obj[key] = value
-
-        return obj
+    this.changeValue = function(params){
+        // Надо переделать!!!
     }
 
-    this.deleteParameter = function(obj, key){
+    this.deleteParameter = function(params){
+        
+        // Надо переделать!!!
+
         if (Array.isArray(obj)){
             if (key == ENV.allArray){
                 let arrayLength = obj.length
@@ -62,80 +134,51 @@ function HandlerForEditingObject(target, script){
     }
 
     this.arrayHandler = function(operator, target, script){
-        //
+        // Надо добавить для автоматичекого прохода всех элементов массива при ключе == ENV.allArray
     }
 
-    this.objectHandler = function(target, paths){
-        let currentTarget = target
-        let newPaths = [...paths]
-        let currentPaths = newPaths
+    this.objectHandler = function(data, paths){
+        let currentData = data
+        let currentKey
+        let currentValue
 
-        for (let i = 0; i < currentPaths.length; i++){
-            let tempTarget = currentTarget
-            const key = currentPaths[i]
-            const futureKey = newPaths[i + 1]
-
-            currentPaths = newPaths
-
-            if (i === newPaths.length - 1){
-                return tempTarget, key, tempTarget[key]
-            }
-            else if (!tempTarget[key]){
-                this.addErrorMessage('Warning', key, "Параметр не найден в изменяемом объекте. Проверь объект и сценарий!")
-                continue
-            }
-            else if (Array.isArray(tempTarget[key]) && futureKey == ENV.allArray){
-                this.arrayHandler(tempTarget)
+        for (const key of paths) {
+            if (!currentData.hasOwnProperty(key)) {
+                this.addErrorMessage('Warning', key, 'Параметр не найден в изменяемом объекте. Проверь объект или сценарий!')
+                return [null, null]
             }
 
-            newPaths = currentPaths.slice(1)
-            tempTarget = tempTarget[key]
+            currentData = currentData[key];
+
+            if (typeof currentData !== 'object') {
+                currentKey = key
+                currentValue = currentData
+            }
         }
 
-        
+        return [currentKey, currentValue]
     }
 
     this.operatorsMainFactory = function(){
-        let currentTarget = this.target
+        let scriptOperatorsArray = Object.getOwnPropertyNames(this.script)
         
         try {
             // Перебираем все операторы сценария
-            for (let operator of this.scriptOperatorsArray){
+            for (let operator of scriptOperatorsArray){
+                if (!ENV.operators.includes(operator)){
+                    // Надо переделать!!!
+                    this.errorMassage = [`${operator}`, `Недопустимый тип оператора!`]
+                }
+                else {
                 // Перебираем список объектов с параметрами сценария
-                for (let item of script[operator]){
-                    let targetPath = item.target.path
-                    let targetValue = item.target.value ? item.target.value : null
-                    let triggerPath = item.trigger && item.trigger.path ? item.trigger.path : null
-                    let triggerValue = item.trigger && item.trigger.value ? item.trigger.value : null
+                    for (let item of this.script[operator]){
+                        let params = this.preparingParameters(item, operator)
 
-                    let params = ['addComment', 'changeValue', 'deleteParameter', 'searchAndComment', 'searchAndChange', 'searchAndDelete']
-
-                    switch (operator) {
-                        case 'addComment':
-                            let [a, b, c] = this.objectHandler(currentTarget, targetPath)
-                            this.addComment(b, c)
-                            break
-                        case 'changeValue':
-                            // this.changeValue(obj, key, value)
-                            break
-                        case 'deleteParameter':
-                            // this.deleteParameter(obj, key)
-                            break
-                        case 'searchAndComment':
-                            // this.searchAndComment(obj, script)
-                            break
-                        case 'searchAndChange':
-                            break
-                        case 'searchAndDelete':
-                            break
-                        default:
-                            this.errorMassage = [`${operator}`, `Недопустимый тип оператора!`]
-                            break
+                        this[operator](params)
                     }
                 }
             }
         }
-
         catch (error) {
             const errorInfo = {
                 type: error.constructor.name,
@@ -151,12 +194,20 @@ function HandlerForEditingObject(target, script){
         }
     }
 
+    this.getResult = function(){
+        return {
+            'newData': this.getData(),
+            'comment': this.getComment(),
+            'color': this.getColor()
+        }
+    }
+
     this.operatorsMainFactory()
 }
 
-// module.exports = {
-//   HandlerForEditingObject
-// }
+module.exports = {
+  HandlerForEditingObject
+}
 
 let body = {
     "first": {
@@ -190,7 +241,7 @@ let script = {
     //         }
     //     }
     // ],
-    // 'addComment': [
+    // 'viewParams': [
     //     {
     //         'target': {
     //             path: ['first', 'secondArray', '@all', 'changeThis'],
@@ -198,15 +249,15 @@ let script = {
     //         }
     //     }
     // ],
-    'addComment':[
+    'viewParams':[
         {
             'target': {
                 path: ['first', 'second', 'trigger'],
-                value: 'searchValue'
+                // value: 'searchValue'
             }
         }
     ]
 }
 
 let test = new HandlerForEditingObject(body, script)
-console.log(test.comment, '\n', test.color)
+console.log(test.getResult())
