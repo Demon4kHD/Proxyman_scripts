@@ -44,7 +44,7 @@ function HandlerForEditingObject(data, script){
 
     this.addComment = function(message){
         // Надо переделать!!!
-        this.comment += `${message}\n`
+        this.comment += `${message}`
     }
 
     this.createCommentText = function(...params){
@@ -101,22 +101,25 @@ function HandlerForEditingObject(data, script){
 
 
     this.viewParams = function(params){
-        // Надо переделать!!!
         let paths = params.target.path
+        let [key, data] = this.objectHandler(this.getData(), paths)
 
-        let [key, value] = this.objectHandler(this.getData(), paths)
-
-        this.addComment(this.createCommentText(...[`${key}: ${value}`]))
+        this.addComment(`${key}: ${data[key]}`)
     }
 
     this.changeValue = function(params){
         // Надо переделать!!!
+        let paths = params.target.path
+        let [key, data] = this.objectHandler(this.getData(), paths)
+
+        data[key] = params.target.value
+        let [newKey, newData] = this.objectHandler(this.getData(), paths)
+
+        this.addComment(`${newKey}: ${newData[key]}`)
     }
 
     this.deleteParameter = function(params){
-        
         // Надо переделать!!!
-
         if (Array.isArray(obj)){
             if (key == ENV.allArray){
                 let arrayLength = obj.length
@@ -148,15 +151,22 @@ function HandlerForEditingObject(data, script){
                 return [null, null]
             }
 
-            currentData = currentData[key];
-
-            if (typeof currentData !== 'object') {
+            if (typeof currentData[key] !== 'object') {
                 currentKey = key
-                currentValue = currentData
+                
             }
+            else {
+                currentData = currentData[key]
+            }
+            
+
+            // if (typeof currentData !== 'object') {
+            //     currentKey = key
+            //     currentValue = currentData
+            // }
         }
 
-        return [currentKey, currentValue]
+        return [currentKey, currentData]
     }
 
     this.operatorsMainFactory = function(){
@@ -249,11 +259,11 @@ let script = {
     //         }
     //     }
     // ],
-    'viewParams':[
+    'changeValue':[
         {
             'target': {
                 path: ['first', 'second', 'trigger'],
-                // value: 'searchValue'
+                value: 'newValue'
             }
         }
     ]
