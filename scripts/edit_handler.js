@@ -158,12 +158,7 @@ function HandlerForEditingObject(data, script){
             else {
                 currentData = currentData[key]
             }
-            
 
-            // if (typeof currentData !== 'object') {
-            //     currentKey = key
-            //     currentValue = currentData
-            // }
         }
 
         return [currentKey, currentData]
