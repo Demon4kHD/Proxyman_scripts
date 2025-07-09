@@ -44,7 +44,7 @@ function HandlerForEditingObject(data, script){
 
     this.addComment = function(message){
         // Надо переделать!!!
-        this.comment += `${message}`
+        this.comment += `${message}\n`
     }
 
     this.createCommentText = function(...params){
@@ -99,41 +99,50 @@ function HandlerForEditingObject(data, script){
         return result
     }
 
+    this.checkingForMissingDeletedParameter = function(keyBeingChecked, data, paths){
+        let currentData = data
+
+        for (const key of paths){
+            if (key != keyBeingChecked){
+                return !currentData.hasOwnProperty(key)
+            }
+            else {
+                if (!currentData.hasOwnProperty(key)){
+                    this.addErrorMessage('Warning', key, 'Параметр не найден в изменяемом объекте. Проверь объект или сценарий!')
+                }
+                else {
+                    currentData = currentData[key]
+                }
+            }
+        }
+    }
 
     this.viewParams = function(params){
         let paths = params.target.path
-        let [key, data] = this.objectHandler(this.getData(), paths)
+        let [data, key, value] = this.objectHandler(this.getData(), paths)
 
-        this.addComment(`${key}: ${data[key]}`)
+        this.addComment(`${key}: ${value}`)
     }
 
     this.changeValue = function(params){
-        // Надо переделать!!!
         let paths = params.target.path
-        let [key, data] = this.objectHandler(this.getData(), paths)
+        let [data, key, value] = this.objectHandler(this.getData(), paths)
 
         data[key] = params.target.value
-        let [newKey, newData] = this.objectHandler(this.getData(), paths)
+        let [newData, newKey, newValue] = this.objectHandler(this.getData(), paths)
 
-        this.addComment(`${newKey}: ${newData[key]}`)
+        this.addComment(`${newKey}: ${newValue}`)
     }
 
     this.deleteParameter = function(params){
-        // Надо переделать!!!
-        if (Array.isArray(obj)){
-            if (key == ENV.allArray){
-                let arrayLength = obj.length
-                obj.splice(0, arrayLength)
-            }
-            else {
-                obj.splice(key, 1)
-            }
-        }
-        else{
-            delete obj[key]
-        }
+        let paths = params.target.path
+        let [data, key, value] = this.objectHandler(this.getData(), paths)
 
-        return obj
+        delete data[key] 
+
+        this.addComment(`${key} удален: 
+            ${this.checkingForMissingDeletedParameter(key, data, paths)}`)
+        // Надо переделать!!! Когда будет реализован arrayHandler
     }
 
     this.arrayHandler = function(operator, target, script){
@@ -142,36 +151,35 @@ function HandlerForEditingObject(data, script){
 
     this.objectHandler = function(data, paths){
         let currentData = data
-        let currentKey
-        let currentValue
+        let value
 
         for (const key of paths) {
             if (!currentData.hasOwnProperty(key)) {
                 this.addErrorMessage('Warning', key, 'Параметр не найден в изменяемом объекте. Проверь объект или сценарий!')
-                return [null, null]
-            }
-
-            if (typeof currentData[key] !== 'object') {
-                currentKey = key
                 
+                return [currentData, key, 'undefined']
             }
             else {
-                currentData = currentData[key]
+                if (key == paths[paths.length - 1]){
+                    value = currentData[key]
+
+                    return [currentData, key, value]
+                }
+                else {
+                    currentData = currentData[key]
+                }
             }
-
         }
-
-        return [currentKey, currentData]
     }
 
     this.operatorsMainFactory = function(){
         let scriptOperatorsArray = Object.getOwnPropertyNames(this.script)
-        
-        try {
-            // Перебираем все операторы сценария
-            for (let operator of scriptOperatorsArray){
+  
+        for (let operator of scriptOperatorsArray){
+        // Перебираем все операторы сценария
+            try {
                 if (!ENV.operators.includes(operator)){
-                    // Надо переделать!!!
+                    // Надо переделать сообщение об ошибках!!!
                     this.errorMassage = [`${operator}`, `Недопустимый тип оператора!`]
                 }
                 else {
@@ -183,19 +191,20 @@ function HandlerForEditingObject(data, script){
                     }
                 }
             }
-        }
-        catch (error) {
-            const errorInfo = {
-                type: error.constructor.name,
-                message: error.message,
-                stack: error.stack
-            };
+            catch (error) {
+                // Надо переделать структуру фатальной ошибки
+                const errorInfo = {
+                    type: error.constructor.name,
+                    message: error.message,
+                    stack: error.stack
+                };
 
-            for (let param in errorInfo){
-                this.comment += `${param}: ${errorInfo[param]}\n`   
+                for (let param in errorInfo){
+                    this.comment += `${param}: ${errorInfo[param]}\n`   
+                }
+
+                this.color = ENV.errorColor
             }
-
-            this.color = ENV.errorColor
         }
     }
 
@@ -246,15 +255,15 @@ let script = {
     //         }
     //     }
     // ],
-    // 'viewParams': [
-    //     {
-    //         'target': {
-    //             path: ['first', 'secondArray', '@all', 'changeThis'],
-    //             value: 99
-    //         }
-    //     }
-    // ],
-    'changeValue':[
+    'viewParams': [
+        {
+            'target': {
+                path: ['first', 'secondArray', 1, 'changeThis'],
+                value: 99
+            }
+        }
+    ],
+    'deleteParameter':[
         {
             'target': {
                 path: ['first', 'second', 'trigger'],
@@ -264,5 +273,42 @@ let script = {
     ]
 }
 
+let trueAnswer = {
+    "first": {
+        "second": {
+            "third": {
+                "ChangingParameter": "value"
+            }
+        },
+        'secondArray': [
+            {
+                "changeThis": 12
+            },
+            {
+                "changeThis": 15
+            }
+        ]
+    }
+}
+
 let test = new HandlerForEditingObject(body, script)
-console.log(test.getResult())
+let result = test.getResult().newData
+
+function startCheck() {
+    let answer = result
+        isEqual = JSON.stringify(answer) === JSON.stringify(trueAnswer);
+
+
+    if (isEqual) {
+        // console.log(`\nIt's your answer:\n\n`, answer, `\n`)
+        console.log(`GOOD JOB!\n`)
+    }
+    else {
+        console.log(`It's TRUE_ANSWER:\n\n`, trueAnswer, `\n`)
+        console.log(`\nIt's you answer:\n\n`, answer, `\n`)
+        console.log(`ARE YOU STUPID ?\n`)
+    }
+}
+
+startCheck()
+console.log(test.getComment())
