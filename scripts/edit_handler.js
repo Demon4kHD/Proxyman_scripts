@@ -118,15 +118,13 @@ function HandlerForEditingObject(data, script){
     }
 
     this.viewParams = function(params){
-        let paths = params.target.path
-        let [data, key, value] = this.objectHandler(this.getData(), paths)
+        let [data, key, value] = this.objectHandler(this.getData(), params.target.path)
 
         this.addComment(`${key}: ${value}`)
     }
 
     this.changeValue = function(params){
-        let paths = params.target.path
-        let [data, key, value] = this.objectHandler(this.getData(), paths)
+        let [data, key, value] = this.objectHandler(this.getData(), params.target.path)
 
         data[key] = params.target.value
         let [newData, newKey, newValue] = this.objectHandler(this.getData(), paths)
@@ -135,15 +133,15 @@ function HandlerForEditingObject(data, script){
     }
 
     this.deleteParameter = function(params){
-        let paths = params.target.path
-        let [data, key, value] = this.objectHandler(this.getData(), paths)
+        let [data, key, value] = this.objectHandler(this.getData(), params.target.path)
 
         delete data[key] 
 
         this.addComment(`${key} удален: 
             ${this.checkingForMissingDeletedParameter(key, data, paths)}`)
-        // Надо переделать!!! Когда будет реализован arrayHandler
+        // Надо переделать, Когда будет реализован arrayHandler!!!
     }
+    
 
     this.arrayHandler = function(operator, target, script){
         // Надо добавить для автоматичекого прохода всех элементов массива при ключе == ENV.allArray
