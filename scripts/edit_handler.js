@@ -105,7 +105,7 @@ function HandlerForEditingObject(data, script){
 
     this.checkingForMissingDeletedParameter = function(keyBeingChecked, data){
         
-        return data.hasOwnProperty(keyBeingChecked)
+        return !data.hasOwnProperty(keyBeingChecked)
     }
 
     this.viewParams = function(params){
@@ -142,19 +142,23 @@ function HandlerForEditingObject(data, script){
 
     this.deleteParameter = function(params){
         let [mixedData , mixedKeys] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
+        const deleteProcess = (data, key) => {
+            if (Array.isArray(data)){
+                data.shift()
+                this.addComment(`${key} удален: ${this.checkingForMissingDeletedParameter(key, data)}`)
+            }
+            else {
+                delete data[key]
+                this.addComment(`${key} удален: ${this.checkingForMissingDeletedParameter(key, data)}`)
+            }
+        }
 
         if (!params.target.path.includes(ENV.allArray)){
-            delete mixedData[mixedKeys]
-
-            this.addComment(`${mixedKeys} удален: 
-                ${this.checkingForMissingDeletedParameter(mixedKeys, mixedData)}`)
+            deleteProcess(mixedData, mixedKeys)
         }
         else {
             for (let i = 0; i < mixedData.length; i++){
-                delete mixedData[i][mixedKeys[i]]
-
-                this.addComment(`${mixedKeys[i]} удален: 
-                    ${this.checkingForMissingDeletedParameter(mixedKeys[i], mixedData[i])}`)
+                deleteProcess(mixedData[i], mixedKeys[i])
             }
         }
     }
@@ -234,9 +238,10 @@ function HandlerForEditingObject(data, script){
             let variationsOfPathElement = this.preparingPathsWithoutAll(data, paths)
 
             for (let newPaths of variationsOfPathElement){
-                mixedData.push(this.objectHandler(data, newPaths)[0])
-                mixedKeys.push(this.objectHandler(data, newPaths)[2])
-                mixedValues.push(this.objectHandler(data, newPaths)[2])
+                let [newData, newKeys, newValues] = this.objectHandler(data, newPaths)
+                mixedData.push(newData)
+                mixedKeys.push(newKeys)
+                mixedValues.push(newValues)
             }
         }
         return [mixedData, mixedKeys, mixedValues]
@@ -328,33 +333,39 @@ let script = {
     //         }
     //     }
     // ],
-    'viewParams': [
+    'deleteParameter': [
         {
             'target': {
                 path: ['first', 'secondArray', '@all', 'changeThis'],
                 // value: 99
             }
-        }
-    ],
-    'deleteParameter':[
+        },
         {
             'target': {
                 path: ['first', 'second', 'trigger'],
                 value: 'newValue'
             }
         }
-    ]
+    ],
+//     'deleteParameter':[
+//         {
+//             'target': {
+//                 path: ['first', 'second', 'trigger'],
+//                 value: 'newValue'
+//             }
+//         }
+//     ]
 }
 
 let trueAnswer = {
     "first": {
         "second": {
-            "trigger": "searchValue",
+            // "trigger": "searchValue",
             "third": {
                 "ChangingParameter": "value"
             }
         },
-        'secondArray': []
+        'secondArray': [{}, {}]
     } 
 }
 
@@ -377,4 +388,6 @@ function startCheck() {
     }
 }
 
-// startCheck()
+startCheck()
+
+console.log('--- This is comment---', '\n', test.getResult().comment)
