@@ -64,7 +64,15 @@ let body = {
             "third": {
                 "ChangingParameter": "value"
             }
-        }
+        },
+        'secondArray': [
+            {
+                "changeThis": 12
+            },
+            {
+                "changeThis": 15
+            }
+        ]
     } 
 }
 

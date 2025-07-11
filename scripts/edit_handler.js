@@ -1,7 +1,8 @@
 const ENV = {
     allArray: '@all',
     operators: [
-        'viewParams', 'changeValue', 'deleteParameter', 'searchAndView', 'searchAndChange', 'searchAndDelete', 'searchAndCheck'
+        'viewParams', 'changeValue', 'deleteParameter', 'searchAndView',
+        'searchAndChange', 'searchAndDelete', 'searchAndCheck'
     ],
     scriptsWithTrigger: [
         'searchAndComment', 'searchAndChange', 'searchAndDelete'
@@ -11,7 +12,9 @@ const ENV = {
     ],
     errorColor: 'red',
     nonFatalErrorColor: 'yellow',
-    nonFatalErrorMessageArray: ['В объекте', 'отсутствует параметр', '\nПроверьте JSON и сценарий или проигнорируйте'],
+    nonFatalErrorMessageArray: [
+        'В объекте', 'отсутствует параметр', '\nПроверьте JSON и сценарий или проигнорируйте'
+    ],
     errorMessageArray: ['Ошибка: В объекте', 'отсутсвтует обязательный элемент']
 }
 
@@ -77,8 +80,8 @@ function HandlerForEditingObject(data, script){
         }
 
         // Добавляем value, если необходимо
-        if (this.doesOperatorHaveValue(operator)) {
-            if (!item || !item.target || !item.target.value) {
+        if (this.doesOperatorHaveValue(operator)){
+            if (!item || !item.target || !item.target.value){
                 throw new Error("Отсутствует target.value в параметрах")
             }
 
@@ -86,10 +89,11 @@ function HandlerForEditingObject(data, script){
         }
 
         // Добавляем trigger, если необходимо
-        if (this.doesOperatorHaveTrigger(operator)) {
-            if (!item.trigger) {
+        if (this.doesOperatorHaveTrigger(operator)){
+            if (!item.trigger){
                 throw new Error("Отсутствует trigger в параметрах или его дочерние параметры")
             }
+
             result.trigger = {
                 path: item.trigger.path,
                 value: item.trigger.value
@@ -99,63 +103,78 @@ function HandlerForEditingObject(data, script){
         return result
     }
 
-    this.checkingForMissingDeletedParameter = function(keyBeingChecked, data, paths){
-        let currentData = data
+    this.checkingForMissingDeletedParameter = function(keyBeingChecked, data){
+        
+        return data.hasOwnProperty(keyBeingChecked)
+    }
 
-        for (const key of paths){
-            if (key != keyBeingChecked){
-                return !currentData.hasOwnProperty(key)
-            }
-            else {
-                if (!currentData.hasOwnProperty(key)){
-                    this.addErrorMessage('Warning', key, 'Параметр не найден в изменяемом объекте. Проверь объект или сценарий!')
-                }
-                else {
-                    currentData = currentData[key]
-                }
+    this.viewParams = function(params){
+        let [mixedData , mixedKeys, mixedValues] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
+
+        if (!params.target.path.includes(ENV.allArray)){
+            this.addComment(`${mixedKeys}: ${mixedValues}`)
+        }
+        else {
+            for (let i = 0; i < mixedData.length; i++){
+                this.addComment(`${mixedKeys[i]}: ${mixedValues[i]}`)
             }
         }
     }
 
-    this.viewParams = function(params){
-        let [data, key, value] = this.objectHandler(this.getData(), params.target.path)
-
-        this.addComment(`${key}: ${value}`)
-    }
-
     this.changeValue = function(params){
-        let [data, key, value] = this.objectHandler(this.getData(), params.target.path)
+        let [mixedData , mixedKeys, ] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
 
-        data[key] = params.target.value
-        let [newData, newKey, newValue] = this.objectHandler(this.getData(), paths)
+        if (!params.target.path.includes(ENV.allArray)){
+            data[mixedKeys] = params.target.value
+            let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
 
-        this.addComment(`${newKey}: ${newValue}`)
+            this.addComment(`${newKey}: ${newValue}`)
+        }
+        else {
+            for (let i = 0; i < mixedData.length; i++){
+                data[mixedKeys[i]] = params.target.value
+                let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
+
+                this.addComment(`${newKey[i]}: ${newValue[i]}`)
+            }
+        }
     }
 
     this.deleteParameter = function(params){
-        let [data, key, value] = this.objectHandler(this.getData(), params.target.path)
+        let [mixedData , mixedKeys] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
 
-        delete data[key] 
+        if (!params.target.path.includes(ENV.allArray)){
+            delete mixedData[mixedKeys]
 
-        this.addComment(`${key} удален: 
-            ${this.checkingForMissingDeletedParameter(key, data, paths)}`)
-        // Надо переделать, Когда будет реализован arrayHandler!!!
+            this.addComment(`${mixedKeys} удален: 
+                ${this.checkingForMissingDeletedParameter(mixedKeys, mixedData)}`)
+        }
+        else {
+            for (let i = 0; i < mixedData.length; i++){
+                delete mixedData[i][mixedKeys[i]]
+
+                this.addComment(`${mixedKeys[i]} удален: 
+                    ${this.checkingForMissingDeletedParameter(mixedKeys[i], mixedData[i])}`)
+            }
+        }
     }
     
+    this.searchAndView = function(params){
+        let [mixedData , mixedKeys, mixedValues] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
 
-    this.arrayHandler = function(operator, target, script){
-        // Надо добавить для автоматичекого прохода всех элементов массива при ключе == ENV.allArray
+        
     }
 
     this.objectHandler = function(data, paths){
         let currentData = data
         let value
-
+        
         for (const key of paths) {
             if (!currentData.hasOwnProperty(key)) {
-                this.addErrorMessage('Warning', key, 'Параметр не найден в изменяемом объекте. Проверь объект или сценарий!')
-                
-                return [currentData, key, 'undefined']
+                this.addErrorMessage(
+                    'Warning', key, 
+                    'Параметр не найден в изменяемом объекте. Проверь объект или сценарий!'
+                )
             }
             else {
                 if (key == paths[paths.length - 1]){
@@ -170,26 +189,77 @@ function HandlerForEditingObject(data, script){
         }
     }
 
+    this.preparingPathsWithoutAll = function(data, paths){
+        let [currentData, currentPath] = [{...data}, [...paths]]
+        let variationsOfPathElement = []
+        let lastElementLength
+
+        const createArray = (start, end) => 
+            Array.from({length: end - start + 1}, (_, i) => start + i)
+
+        for (let key of currentPath){
+            if (key != ENV.allArray){
+                currentData = currentData[key]
+                variationsOfPathElement.push([key])
+            }
+            else {
+                lastElementLength = currentData.length - 1
+                currentData = currentData[0]
+                variationsOfPathElement.push(Array.from({
+                    length: lastElementLength - 0 + 1
+                }, (_, i) => 0 + i))
+            }
+        }
+        
+        let result = variationsOfPathElement.reduce((acc, array) => {
+            return array.flatMap(value => 
+                acc.map(combination => combination.concat(value))
+            );
+        }, [[]])
+
+        return variationsOfPathElement.reduce((acc, array) => {
+            return array.flatMap(value => 
+                acc.map(combination => combination.concat(value))
+            );
+        }, [[]])
+    }
+
+    this.performDataAnalysisAndSelectMethod = function(data, paths){
+        let [mixedData, mixedKeys, mixedValues] = [[], [], []]
+
+        if (!paths.includes(ENV.allArray)){
+            [mixedData, mixedKeys, mixedValues] =  this.objectHandler(data, paths)
+        }
+        else {
+            let variationsOfPathElement = this.preparingPathsWithoutAll(data, paths)
+
+            for (let newPaths of variationsOfPathElement){
+                mixedData.push(this.objectHandler(data, newPaths)[0])
+                mixedKeys.push(this.objectHandler(data, newPaths)[2])
+                mixedValues.push(this.objectHandler(data, newPaths)[2])
+            }
+        }
+        return [mixedData, mixedKeys, mixedValues]
+    }
+
     this.operatorsMainFactory = function(){
         let scriptOperatorsArray = Object.getOwnPropertyNames(this.script)
   
         for (let operator of scriptOperatorsArray){
         // Перебираем все операторы сценария
-            try {
+            try{
                 if (!ENV.operators.includes(operator)){
                     // Надо переделать сообщение об ошибках!!!
                     this.errorMassage = [`${operator}`, `Недопустимый тип оператора!`]
                 }
-                else {
+                else{
                 // Перебираем список объектов с параметрами сценария
                     for (let item of this.script[operator]){
-                        let params = this.preparingParameters(item, operator)
-
-                        this[operator](params)
+                        this[operator](this.preparingParameters(item, operator))
                     }
                 }
             }
-            catch (error) {
+            catch (error){
                 // Надо переделать структуру фатальной ошибки
                 const errorInfo = {
                     type: error.constructor.name,
@@ -207,19 +277,24 @@ function HandlerForEditingObject(data, script){
     }
 
     this.getResult = function(){
+        this.operatorsMainFactory()
+
         return {
             'newData': this.getData(),
             'comment': this.getComment(),
             'color': this.getColor()
         }
     }
-
-    this.operatorsMainFactory()
 }
 
 module.exports = {
   HandlerForEditingObject
 }
+
+
+// -------------------------------
+
+
 
 let body = {
     "first": {
@@ -256,8 +331,8 @@ let script = {
     'viewParams': [
         {
             'target': {
-                path: ['first', 'secondArray', 1, 'changeThis'],
-                value: 99
+                path: ['first', 'secondArray', '@all', 'changeThis'],
+                // value: 99
             }
         }
     ],
@@ -274,19 +349,13 @@ let script = {
 let trueAnswer = {
     "first": {
         "second": {
+            "trigger": "searchValue",
             "third": {
                 "ChangingParameter": "value"
             }
         },
-        'secondArray': [
-            {
-                "changeThis": 12
-            },
-            {
-                "changeThis": 15
-            }
-        ]
-    }
+        'secondArray': []
+    } 
 }
 
 let test = new HandlerForEditingObject(body, script)
@@ -308,5 +377,4 @@ function startCheck() {
     }
 }
 
-startCheck()
-console.log(test.getComment())
+// startCheck()
