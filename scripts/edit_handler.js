@@ -1,7 +1,8 @@
 const ENV = {
     allArray: '@all',
     operators: [
-        'viewParams', 'changeValue', 'deleteParameter', 'searchAndView', 'searchAndChange', 'searchAndDelete', 'searchAndCheck'
+        'viewParams', 'changeValue', 'deleteParameter', 'searchAndView',
+        'searchAndChange', 'searchAndDelete', 'searchAndCheck'
     ],
     scriptsWithTrigger: [
         'searchAndComment', 'searchAndChange', 'searchAndDelete'
@@ -11,7 +12,9 @@ const ENV = {
     ],
     errorColor: 'red',
     nonFatalErrorColor: 'yellow',
-    nonFatalErrorMessageArray: ['В объекте', 'отсутствует параметр', '\nПроверьте JSON и сценарий или проигнорируйте'],
+    nonFatalErrorMessageArray: [
+        'В объекте', 'отсутствует параметр', '\nПроверьте JSON и сценарий или проигнорируйте'
+    ],
     errorMessageArray: ['Ошибка: В объекте', 'отсутсвтует обязательный элемент']
 }
 
@@ -77,8 +80,8 @@ function HandlerForEditingObject(data, script){
         }
 
         // Добавляем value, если необходимо
-        if (this.doesOperatorHaveValue(operator)) {
-            if (!item || !item.target || !item.target.value) {
+        if (this.doesOperatorHaveValue(operator)){
+            if (!item || !item.target || !item.target.value){
                 throw new Error("Отсутствует target.value в параметрах")
             }
 
@@ -86,10 +89,11 @@ function HandlerForEditingObject(data, script){
         }
 
         // Добавляем trigger, если необходимо
-        if (this.doesOperatorHaveTrigger(operator)) {
-            if (!item.trigger) {
+        if (this.doesOperatorHaveTrigger(operator)){
+            if (!item.trigger){
                 throw new Error("Отсутствует trigger в параметрах или его дочерние параметры")
             }
+
             result.trigger = {
                 path: item.trigger.path,
                 value: item.trigger.value
@@ -99,115 +103,203 @@ function HandlerForEditingObject(data, script){
         return result
     }
 
+    this.checkingForMissingDeletedParameter = function(keyBeingChecked, data){
+        
+        return !data.hasOwnProperty(keyBeingChecked)
+    }
 
     this.viewParams = function(params){
-        // Надо переделать!!!
-        let paths = params.target.path
+        let [mixedData , mixedKeys, mixedValues] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
 
-        let [key, value] = this.objectHandler(this.getData(), paths)
-
-        this.addComment(this.createCommentText(...[`${key}: ${value}`]))
+        if (!params.target.path.includes(ENV.allArray)){
+            this.addComment(`${mixedKeys}: ${mixedValues}`)
+        }
+        else {
+            for (let i = 0; i < mixedData.length; i++){
+                this.addComment(`${mixedKeys[i]}: ${mixedValues[i]}`)
+            }
+        }
     }
 
     this.changeValue = function(params){
-        // Надо переделать!!!
+        let [mixedData , mixedKeys, ] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
+
+        if (!params.target.path.includes(ENV.allArray)){
+            data[mixedKeys] = params.target.value
+            let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
+
+            this.addComment(`${newKey}: ${newValue}`)
+        }
+        else {
+            for (let i = 0; i < mixedData.length; i++){
+                data[mixedKeys[i]] = params.target.value
+                let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
+
+                this.addComment(`${newKey[i]}: ${newValue[i]}`)
+            }
+        }
     }
 
     this.deleteParameter = function(params){
-        
-        // Надо переделать!!!
-
-        if (Array.isArray(obj)){
-            if (key == ENV.allArray){
-                let arrayLength = obj.length
-                obj.splice(0, arrayLength)
+        let [mixedData , mixedKeys] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
+        const deleteProcess = (data, key) => {
+            if (Array.isArray(data)){
+                data.shift()
+                this.addComment(`${key} удален: ${this.checkingForMissingDeletedParameter(key, data)}`)
             }
             else {
-                obj.splice(key, 1)
+                delete data[key]
+                this.addComment(`${key} удален: ${this.checkingForMissingDeletedParameter(key, data)}`)
             }
         }
-        else{
-            delete obj[key]
+
+        if (!params.target.path.includes(ENV.allArray)){
+            deleteProcess(mixedData, mixedKeys)
         }
-
-        return obj
+        else {
+            for (let i = 0; i < mixedData.length; i++){
+                deleteProcess(mixedData[i], mixedKeys[i])
+            }
+        }
     }
+    
+    this.searchAndView = function(params){
+        let [mixedData , mixedKeys, mixedValues] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
 
-    this.arrayHandler = function(operator, target, script){
-        // Надо добавить для автоматичекого прохода всех элементов массива при ключе == ENV.allArray
+        
     }
 
     this.objectHandler = function(data, paths){
         let currentData = data
-        let currentKey
-        let currentValue
-
+        let value
+        
         for (const key of paths) {
             if (!currentData.hasOwnProperty(key)) {
-                this.addErrorMessage('Warning', key, 'Параметр не найден в изменяемом объекте. Проверь объект или сценарий!')
-                return [null, null]
+                this.addErrorMessage(
+                    'Warning', key, 
+                    'Параметр не найден в изменяемом объекте. Проверь объект или сценарий!'
+                )
             }
+            else {
+                if (key == paths[paths.length - 1]){
+                    value = currentData[key]
 
-            currentData = currentData[key];
-
-            if (typeof currentData !== 'object') {
-                currentKey = key
-                currentValue = currentData
+                    return [currentData, key, value]
+                }
+                else {
+                    currentData = currentData[key]
+                }
             }
         }
+    }
 
-        return [currentKey, currentValue]
+    this.preparingPathsWithoutAll = function(data, paths){
+        let [currentData, currentPath] = [{...data}, [...paths]]
+        let variationsOfPathElement = []
+        let lastElementLength
+
+        const createArray = (start, end) => 
+            Array.from({length: end - start + 1}, (_, i) => start + i)
+
+        for (let key of currentPath){
+            if (key != ENV.allArray){
+                currentData = currentData[key]
+                variationsOfPathElement.push([key])
+            }
+            else {
+                lastElementLength = currentData.length - 1
+                currentData = currentData[0]
+                variationsOfPathElement.push(Array.from({
+                    length: lastElementLength - 0 + 1
+                }, (_, i) => 0 + i))
+            }
+        }
+        
+        let result = variationsOfPathElement.reduce((acc, array) => {
+            return array.flatMap(value => 
+                acc.map(combination => combination.concat(value))
+            );
+        }, [[]])
+
+        return variationsOfPathElement.reduce((acc, array) => {
+            return array.flatMap(value => 
+                acc.map(combination => combination.concat(value))
+            );
+        }, [[]])
+    }
+
+    this.performDataAnalysisAndSelectMethod = function(data, paths){
+        let [mixedData, mixedKeys, mixedValues] = [[], [], []]
+
+        if (!paths.includes(ENV.allArray)){
+            [mixedData, mixedKeys, mixedValues] =  this.objectHandler(data, paths)
+        }
+        else {
+            let variationsOfPathElement = this.preparingPathsWithoutAll(data, paths)
+
+            for (let newPaths of variationsOfPathElement){
+                let [newData, newKeys, newValues] = this.objectHandler(data, newPaths)
+                mixedData.push(newData)
+                mixedKeys.push(newKeys)
+                mixedValues.push(newValues)
+            }
+        }
+        return [mixedData, mixedKeys, mixedValues]
     }
 
     this.operatorsMainFactory = function(){
         let scriptOperatorsArray = Object.getOwnPropertyNames(this.script)
-        
-        try {
-            // Перебираем все операторы сценария
-            for (let operator of scriptOperatorsArray){
+  
+        for (let operator of scriptOperatorsArray){
+        // Перебираем все операторы сценария
+            try{
                 if (!ENV.operators.includes(operator)){
-                    // Надо переделать!!!
+                    // Надо переделать сообщение об ошибках!!!
                     this.errorMassage = [`${operator}`, `Недопустимый тип оператора!`]
                 }
-                else {
+                else{
                 // Перебираем список объектов с параметрами сценария
                     for (let item of this.script[operator]){
-                        let params = this.preparingParameters(item, operator)
-
-                        this[operator](params)
+                        this[operator](this.preparingParameters(item, operator))
                     }
                 }
             }
-        }
-        catch (error) {
-            const errorInfo = {
-                type: error.constructor.name,
-                message: error.message,
-                stack: error.stack
-            };
+            catch (error){
+                // Надо переделать структуру фатальной ошибки
+                const errorInfo = {
+                    type: error.constructor.name,
+                    message: error.message,
+                    stack: error.stack
+                };
 
-            for (let param in errorInfo){
-                this.comment += `${param}: ${errorInfo[param]}\n`   
+                for (let param in errorInfo){
+                    this.comment += `${param}: ${errorInfo[param]}\n`   
+                }
+
+                this.color = ENV.errorColor
             }
-
-            this.color = ENV.errorColor
         }
     }
 
     this.getResult = function(){
+        this.operatorsMainFactory()
+
         return {
             'newData': this.getData(),
             'comment': this.getComment(),
             'color': this.getColor()
         }
     }
-
-    this.operatorsMainFactory()
 }
 
 module.exports = {
   HandlerForEditingObject
 }
+
+
+// -------------------------------
+
+
 
 let body = {
     "first": {
@@ -241,23 +333,61 @@ let script = {
     //         }
     //     }
     // ],
-    // 'viewParams': [
-    //     {
-    //         'target': {
-    //             path: ['first', 'secondArray', '@all', 'changeThis'],
-    //             value: 99
-    //         }
-    //     }
-    // ],
-    'viewParams':[
+    'deleteParameter': [
+        {
+            'target': {
+                path: ['first', 'secondArray', '@all', 'changeThis'],
+                // value: 99
+            }
+        },
         {
             'target': {
                 path: ['first', 'second', 'trigger'],
-                // value: 'searchValue'
+                value: 'newValue'
             }
         }
-    ]
+    ],
+//     'deleteParameter':[
+//         {
+//             'target': {
+//                 path: ['first', 'second', 'trigger'],
+//                 value: 'newValue'
+//             }
+//         }
+//     ]
+}
+
+let trueAnswer = {
+    "first": {
+        "second": {
+            // "trigger": "searchValue",
+            "third": {
+                "ChangingParameter": "value"
+            }
+        },
+        'secondArray': [{}, {}]
+    } 
 }
 
 let test = new HandlerForEditingObject(body, script)
-console.log(test.getResult())
+let result = test.getResult().newData
+
+function startCheck() {
+    let answer = result
+        isEqual = JSON.stringify(answer) === JSON.stringify(trueAnswer);
+
+
+    if (isEqual) {
+        // console.log(`\nIt's your answer:\n\n`, answer, `\n`)
+        console.log(`GOOD JOB!\n`)
+    }
+    else {
+        console.log(`It's TRUE_ANSWER:\n\n`, trueAnswer, `\n`)
+        console.log(`\nIt's you answer:\n\n`, answer, `\n`)
+        console.log(`ARE YOU STUPID ?\n`)
+    }
+}
+
+startCheck()
+
+console.log('--- This is comment---', '\n', test.getResult().comment)
