@@ -273,7 +273,7 @@ function HandlerForEditingObject(data, script){
         let [mixedData , mixedKeys] = this.findingAndChoosingRightPath(params)
 
         if (!params.target.path.includes(ENV.allArray)){
-            data[mixedKeys] = params.target.value
+            mixedData[mixedKeys] = params.target.value
             let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
 
             this.addMessage({
@@ -284,7 +284,7 @@ function HandlerForEditingObject(data, script){
         }
         else {
             for (let i = 0; i < mixedData.length; i++){
-                data[mixedKeys[i]] = params.target.value
+                mixedData[mixedKeys[i]] = params.target.value
                 let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
 
                 this.addMessage({
@@ -485,17 +485,17 @@ let trueAnswer = {
             "second": {
                 // "trigger": "searchValue",
                 "third": {
-                    "ChangingParameter": "value"
+                    "ChangingParameter": "newValue"
                 }
             },
             'secondArray': [{}, {}]
         }
     }, 
     "comment": [
-        'ChangingParameter: value',
-        'changeThis удален: true',
-        'changeThis удален: true',
-        'trigger удален: true',
+        'searchAndChange: ChangingParameter - newValue',
+        'deleteParameter: changeThis - true',
+        'deleteParameter: changeThis - true',
+        'deleteParameter: trigger - true'
     ],
     'color': 'green'
      
