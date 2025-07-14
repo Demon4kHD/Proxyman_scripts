@@ -1,74 +1,87 @@
 const ENV = {
     allArray: '@all',
-    operators: [
-        'viewParams', 'changeValue', 'deleteParameter', 'searchAndView',
-        'searchAndChange', 'searchAndDelete', 'searchAndCheck'
-    ],
-    scriptsWithTrigger: [
-        'searchAndComment', 'searchAndChange', 'searchAndDelete'
-    ],
-    scriptsWithValue: [
-        'changeValue', 'searchAndChange', 'searchAndCheck'
-    ],
-    errorColor: 'red',
-    nonFatalErrorColor: 'yellow',
-    nonFatalErrorMessageArray: [
-        'В объекте', 'отсутствует параметр', '\nПроверьте JSON и сценарий или проигнорируйте'
-    ],
-    errorMessageArray: ['Ошибка: В объекте', 'отсутсвтует обязательный элемент']
+    operatorsData:{
+        operators: [
+            'viewParams', 'changeValue', 'deleteParameter', 'searchAndView',
+            'searchAndChange', 'searchAndDelete', 'searchAndCheck'
+        ],
+        scriptsWithTrigger: [
+            'searchAndComment', 'searchAndChange', 'searchAndDelete'
+        ],
+        scriptsWithValue: [
+            'changeValue', 'searchAndChange', 'searchAndCheck'
+        ]
+    },
+    colors: {
+        'Normal': 'green',
+        'Attention': 'yellow',
+        'Critical': 'red'
+    },
+    typeOfErrors: {
+        'Normal': 'addMessageWithoutErrors',
+        'Attention': 'addWarningMessage', 
+        'Critical': 'addErrorMessage' 
+    }
 }
+
+
 
 function HandlerForEditingObject(data, script){
     this.data = {...data}
     this.script = script
-    this.color = ''
-    this.comment = []
-    this.errorMassages = []
+    this.color = []
+    this.messages = {
+        'Normal': [],
+        'Attention': [],
+        'Critical': []
+    }
+    // this.errorMassages = []
 
-    this.addErrorMessage = function(type, element, textMessages){
-        this.errorMessages.push({
-            type: type,
-            element: element,
-            text: textMessages
-        })
+    this.addMessageWithoutErrors = function(){
+
     }
 
-    this.getErrorMessages = function(){
-        return this.errorMassages
-    }
+    // this.addErrorMessage = function(errorType, functionName, message){
+    //     let currentMessage = `---${errorType}---\nОшибка возникла в ${functionName}\n${message}`
+    //     this.errorMessages.push(currentMessage)
+    // }
 
-    this.setColor = function(color){
-        this.color = color
+    // this.getErrorMessages = function(){
+    // //     return this.errorMassages
+    // }
+
+    this.addColor = function(color){
+        this.color.push(color)
     }
 
     this.getColor = function(){
-        return this.color
+        if (this.color.includes(ENV.colors.error)){
+            return ENV.colors.error
+        }
+        else {
+            return this.color.includes(ENV.colors.warning) ? ENV.colors.warning : ENV.colors.normal
+        }
     }
 
-    this.addComment = function(message){
-        // Надо переделать!!!
-        this.comment.push[`${message}\n`]
-    }
+    // this.addComment = function(operation, key, value){
+    //     this.comment.push(`${operation}: ${key} - ${value}\n`)
+    //     this.addColor(ENV.colors.normal)
+    // }
 
-    this.createCommentText = function(...params){
-        // Надо переделать!!!
-        this.addComment(params)
-    }
-
-    this.getComment = function(){
-        return this.comment
-    }
+    // this.getComment = function(){
+    //     return this.comment
+    // }
 
     this.getData = function(){
         return this.data
     }
 
     this.doesOperatorHaveTrigger = function(operator){
-        return ENV.scriptsWithTrigger.includes(operator)
+        return ENV.operatorsData.scriptsWithTrigger.includes(operator)
     }
 
     this.doesOperatorHaveValue = function(operator){
-        return ENV.scriptsWithValue.includes(operator)
+        return ENV.operatorsData.scriptsWithValue.includes(operator)
     }
 
     this.preparingParameters = function(item, operator){
@@ -167,13 +180,18 @@ function HandlerForEditingObject(data, script){
     }
 
     this.deleteProcess = function(data, key){
-        if (Array.isArray(data)){
-            data.shift()
-            this.addComment(`${key} удален: ${this.checkingForMissingDeletedParameter(data, key)}`)
+        try {
+            if (Array.isArray(data)){
+                data.shift()
+                this.addComment(`${key} удален: ${this.checkingForMissingDeletedParameter(data, key)}`)
+            }
+            else {
+                delete data[key]
+                this.addComment(`${key} удален: ${this.checkingForMissingDeletedParameter(data, key)}`)
+            }
         }
-        else {
-            delete data[key]
-            this.addComment(`${key} удален: ${this.checkingForMissingDeletedParameter(data, key)}`)
+        catch (error){
+
         }
     }
 
@@ -313,7 +331,7 @@ function HandlerForEditingObject(data, script){
         for (let operator of scriptOperatorsArray){
         // Перебираем все операторы сценария
             try{
-                if (!ENV.operators.includes(operator)){
+                if (!ENV.operatorsData.operators.includes(operator)){
                     // Надо переделать сообщение об ошибках!!!
                     this.errorMassage = [`${operator}`, `Недопустимый тип оператора!`]
                 }
@@ -421,12 +439,12 @@ let trueAnswer = {
             'secondArray': [{}, {}]
         }
     }, 
-    "comment": {
-        'ChangingParameter: value'
-        'changeThis удален: true'
-        'changeThis удален: true'
-        'trigger удален: true'
-    },
+    "comment": [
+        'ChangingParameter: value',
+        'changeThis удален: true',
+        'changeThis удален: true',
+        'trigger удален: true',
+    ],
     'color': 'green'
      
 }
@@ -452,4 +470,4 @@ function startCheck() {
 
 startCheck()
 
-console.log('--- This is comment---', '\n', test.getResult().comment)
+// console.log('--- This is comment---', '\n', test.getResult().comment)
