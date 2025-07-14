@@ -13,14 +13,9 @@ const ENV = {
         ]
     },
     colors: {
-        'Normal': 'green',
-        'Attention': 'yellow',
-        'Critical': 'red'
-    },
-    typeOfErrors: {
-        'Normal': 'addMessageWithoutErrors',
-        'Attention': 'addWarningMessage', 
-        'Critical': 'addErrorMessage' 
+        'addMessageWithoutErrors': 'green',
+        'addWarningMessage': 'yellow',
+        'addErrorMessage': 'red'
     }
 }
 
@@ -32,13 +27,33 @@ function HandlerForEditingObject(data, script){
     this.color = []
     this.messages = {
         'Normal': [],
-        'Attention': [],
+        'Warning': [],
         'Critical': []
     }
-    // this.errorMassages = []
 
-    this.addMessageWithoutErrors = function(){
+    this.addMessage = function(params){
+        let [typeOfMessage, callerName] = [params.typeOfMessage, arguments.callee.caller]
 
+
+        if (typeOfMessage == 'addMessageWithoutErrors'){
+            let [key, value] = [params.key, params.value]
+            this.messages.push(`${callerName}: ${key} - ${value}\n`)
+        }
+        else if (typeOfMessage == 'addWarningMessage'){
+            let [message] = [params.message]
+            this.messages.push(`${callerName}: ${message}`)
+        }
+        else if (typeOfMessage == 'addMessageWithoutErrors'){
+            let [message] = [params.message]
+            this.messages.push(
+                `---${'Critical Error'}---
+                Ошибка возникла в ${callerName}
+                ${message}`)
+        }
+    }
+
+    this.getMessages = function(){
+        return this.messages
     }
 
     // this.addErrorMessage = function(errorType, functionName, message){
@@ -50,16 +65,19 @@ function HandlerForEditingObject(data, script){
     // //     return this.errorMassages
     // }
 
-    this.addColor = function(color){
-        this.color.push(color)
+    this.addColor = function(){
+        this.color.push(ENV.colors[arguments.callee.caller ? arguments.callee.caller.name : ''])
     }
 
     this.getColor = function(){
-        if (this.color.includes(ENV.colors.error)){
-            return ENV.colors.error
+        if (this.color.includes(ENV.colors.addErrorMessage)){
+            return ENV.colors.addErrorMessage
+        }
+        else if (this.color.includes(ENV.colors.addWarningMessage)){
+            return ENV.colors.addWarningMessage
         }
         else {
-            return this.color.includes(ENV.colors.warning) ? ENV.colors.warning : ENV.colors.normal
+            return ENV.colors.addMessageWithoutErrors
         }
     }
 
@@ -122,27 +140,33 @@ function HandlerForEditingObject(data, script){
     }
 
     this.findingAndChoosingRightPath = function(params){
-        let [mixedTriggerData , ,mixedTriggerValues] = this.performDataAnalysisAndSelectMethod(
-            this.getData(), params.trigger.path
-        )
-        let [mixedTargetData , mixedTargetKeys, mixedTargetValues] = this.performDataAnalysisAndSelectMethod(
-            this.getData(), params.target.path
-        )
-        let [rigthTargetData, rigthTargetKeys, rigthTargetValues] = [[], [], []]
+        try {
+            let [mixedTriggerData , ,mixedTriggerValues] = this.performDataAnalysisAndSelectMethod(
+                this.getData(), params.trigger.path
+            )
+            let [mixedTargetData , mixedTargetKeys, mixedTargetValues] = this.performDataAnalysisAndSelectMethod(
+                this.getData(), params.target.path
+            )
+            let [rigthTargetData, rigthTargetKeys, rigthTargetValues] = [[], [], []]
 
-        if (!Array.isArray(mixedTriggerData)){
-            return (params.trigger.value == mixedTriggerValues ? [mixedTargetData , mixedTargetKeys, mixedTargetValues] : 
-                [])
-        }
-        else {
-            for (let i = 0; i < mixedTriggerData.length; i++){
-                if (params.trigger.value == mixedTriggerValues[i]){
-                    rigthTargetData.push(mixedTargetDat[i])
-                    rigthTargetKeys.push(mixedTargetKeys[i])
-                    rigthTargetValues.push(mixedTargetValues[i])
+            if (!Array.isArray(mixedTriggerData)){
+                return (params.trigger.value == mixedTriggerValues ? [mixedTargetData , mixedTargetKeys, mixedTargetValues] : 
+                    [])
+            }
+            else {
+                for (let i = 0; i < mixedTriggerData.length; i++){
+                    if (params.trigger.value == mixedTriggerValues[i]){
+                        rigthTargetData.push(mixedTargetDat[i])
+                        rigthTargetKeys.push(mixedTargetKeys[i])
+                        rigthTargetValues.push(mixedTargetValues[i])
+                    }
                 }
             }
         }
+        catch (error) {
+            
+        }
+
 
         return [rigthTargetData, rigthTargetKeys, rigthTargetValues]
     }
@@ -220,7 +244,6 @@ function HandlerForEditingObject(data, script){
             }
         }
     }
-    let t = ['searchAndChange', 'searchAndDelete']
 
     this.searchAndChange = function(params){
         let [mixedData , mixedKeys] = this.findingAndChoosingRightPath(params)
@@ -350,11 +373,11 @@ function HandlerForEditingObject(data, script){
                     stack: error.stack
                 };
 
-                for (let param in errorInfo){
-                    this.comment += `${param}: ${errorInfo[param]}\n`   
-                }
+                // for (let param in errorInfo){
+                //     this.comment += `${param}: ${errorInfo[param]}\n`   
+                // }
 
-                this.color = ENV.errorColor
+                // this.color = ENV.errorColor
             }
         }
     }
@@ -364,7 +387,7 @@ function HandlerForEditingObject(data, script){
 
         return {
             'newData': this.getData(),
-            'comment': this.getComment(),
+            'comment': this.getMessages(),
             'color': this.getColor()
         }
     }
