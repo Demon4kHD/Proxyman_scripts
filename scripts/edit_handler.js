@@ -1,19 +1,20 @@
 const ENV = {
     allArray: '@all',
+    any: '@any',
     operatorsData:{
         operators: [
             'viewParams', 'changeValue', 'addParameter', 'deleteParameter', 'searchAndView',
-            'searchAndChange', 'searchAndDelete', 'searchAndCheck'
+            'searchAndChange', 'searchAndDelete', 'searchAndCheck', 'searchAndAdd'
         ],
         scriptsWithTrigger: [
-            'searchAndComment', 'searchAndChange', 'searchAndDelete'
+            'searchAndComment', 'searchAndChange', 'searchAndDelete', 'searchAndAdd'
         ],
         scriptsWithValue: [
             'changeValue', 'addParameter', 'searchAndChange', 'searchAndCheck'
         ]
     },
     colors: {
-        'withoutError': 'green',
+        'normal': 'green',
         'warning': 'yellow',
         'error': 'red'
     }
@@ -28,14 +29,11 @@ function HandlerForEditingObject(data, script){
     this.messages = []
 
     this.addMessage = function(params){
-        console.log(params)
         if (params.typeOfMessage === 'error'){
             this.messages.push(`Ошибка возникла в ${params.nameOfCallerFunction}: ${params.message}`)}
         else{
             this.messages.push(`${params.nameOfCallerFunction}: ${params.message}`)
         }
-
-        console.log(ENV.colors[params.typeOfMessage])
 
         this.addColor(ENV.colors[params.typeOfMessage])
     }
@@ -56,7 +54,7 @@ function HandlerForEditingObject(data, script){
             return ENV.colors.warning
         }
         else {
-            return ENV.colors.withoutError
+            return ENV.colors.normal
         }
     }
 
@@ -109,25 +107,33 @@ function HandlerForEditingObject(data, script){
         return !data.hasOwnProperty(keyBeingChecked)
     }
 
-    this.findingAndChoosingRightPath = function(params){
+    this.findingAndChoosingRightPath = function(params, shouldAdd){
         let [mixedTriggerData , ,mixedTriggerValues] = this.performDataAnalysisAndSelectMethod(
-            this.getData(), params.trigger.path
+            this.getData(), params.trigger.path, shouldAdd
         )
-        let [mixedTargetData , mixedTargetKeys, mixedTargetValues] = this.performDataAnalysisAndSelectMethod(
-            this.getData(), params.target.path
-        )
+        let targetKeys = this.preparingPathsWithoutAll(this.getData(), params.target.path)
         let [rigthTargetData, rigthTargetKeys, rigthTargetValues] = [[], [], []]
 
         if (!Array.isArray(mixedTriggerData)){
-            return (params.trigger.value == mixedTriggerValues ? [mixedTargetData , mixedTargetKeys, mixedTargetValues] : 
-                [])
+            let currentTrigger = params.trigger.value === ENV.any ? mixedTriggerValues : params.trigger.value
+
+            if (currentTrigger == mixedTriggerValues){
+                [rigthTargetData, rigthTargetKeys, rigthTargetValues] = this.performDataAnalysisAndSelectMethod(
+                    this.getData(), params.target.path, shouldAdd
+                )
+            }
         }
         else {
             for (let i = 0; i < mixedTriggerData.length; i++){
-                if (params.trigger.value == mixedTriggerValues[i]){
-                    rigthTargetData.push(mixedTargetDat[i])
-                    rigthTargetKeys.push(mixedTargetKeys[i])
-                    rigthTargetValues.push(mixedTargetValues[i])
+                let currentTrigger = params.trigger.value === ENV.any ? mixedTriggerValues : params.trigger.value
+
+                if (currentTrigger == mixedTriggerValues[i]){
+                    let [currentData, currentKey, currentValue] = this.performDataAnalysisAndSelectMethod(
+                        this.getData(), targetKeys[i], shouldAdd
+                    )
+                    rigthTargetData.push(currentData)
+                    rigthTargetKeys.push(currentKey)
+                    rigthTargetValues.push(currentValue)
                 }
             }
         }
@@ -136,11 +142,11 @@ function HandlerForEditingObject(data, script){
     }
 
     this.viewParams = function(params){
-        let [mixedData , mixedKeys, mixedValues] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
+        let [mixedData , mixedKeys, mixedValues] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
 
         if (!params.target.path.includes(ENV.allArray)){
             this.addMessage({
-                'typeOfMessage': 'withoutError', 
+                'typeOfMessage': 'normal', 
                 'nameOfCallerFunction': 'viewParams',
                 'message': `${mixedKeys} - ${mixedValues}`
             })
@@ -148,7 +154,7 @@ function HandlerForEditingObject(data, script){
         else {
             for (let i = 0; i < mixedData.length; i++){
                 this.addMessage({
-                    'typeOfMessage': 'withoutError', 
+                    'typeOfMessage': 'normal', 
                     'nameOfCallerFunction': 'viewParams',
                     'message': `${mixedKeys[i]} - ${mixedValues[i]}`
                 })
@@ -157,14 +163,13 @@ function HandlerForEditingObject(data, script){
     }
 
     this.changeValue = function(params){
-        let [mixedData , mixedKeys, ] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
+        let [mixedData , mixedKeys, ] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
 
         if (!params.target.path.includes(ENV.allArray)){
             data[mixedKeys] = params.target.value
-            let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
-
+            let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
             this.addMessage({
-                'typeOfMessage': 'withoutError', 
+                'typeOfMessage': 'normal', 
                 'nameOfCallerFunction': 'changeValue',
                 'message': `${newKey} - ${newValue}`
             })
@@ -172,10 +177,9 @@ function HandlerForEditingObject(data, script){
         else {
             for (let i = 0; i < mixedData.length; i++){
                 data[mixedKeys[i]] = params.target.value
-                let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
-
+                let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
                 this.addMessage({
-                    'typeOfMessage': 'withoutError', 
+                    'typeOfMessage': 'normal', 
                     'nameOfCallerFunction': 'changeValue',
                     'message': `${newKey[i]} - ${newValue[i]}`
                 })
@@ -187,7 +191,7 @@ function HandlerForEditingObject(data, script){
         if (Array.isArray(data)){
             data.shift()
             this.addMessage({
-                'typeOfMessage': 'withoutError', 
+                'typeOfMessage': 'normal', 
                 'nameOfCallerFunction': 'deleteParameter',
                 'message': `${key} - ${this.checkingForMissingDeletedParameter(data, key)}`
             })
@@ -195,7 +199,7 @@ function HandlerForEditingObject(data, script){
         else {
             delete data[key]
             this.addMessage({
-                'typeOfMessage': 'withoutError', 
+                'typeOfMessage': 'normal', 
                 'nameOfCallerFunction': 'deleteParameter',
                 'message': `${key} - ${this.checkingForMissingDeletedParameter(data, key)}`
             })
@@ -203,7 +207,7 @@ function HandlerForEditingObject(data, script){
     }
 
     this.deleteParameter = function(params){
-        let [mixedData , mixedKeys] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
+        let [mixedData , mixedKeys] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
 
         if (!params.target.path.includes(ENV.allArray)){
             this.deleteProcess(mixedData, mixedKeys)
@@ -216,14 +220,14 @@ function HandlerForEditingObject(data, script){
     }
 
     this.addParameter = function(params){
-        let [mixedData , mixedKeys, ] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, params.target.value)
+        let [mixedData , mixedKeys, ] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, true)
 
         if (!params.target.path.includes(ENV.allArray)){
             data[mixedKeys] = params.target.value
-            let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, params.target.value)
+            let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
 
             this.addMessage({
-                'typeOfMessage': 'withoutError', 
+                'typeOfMessage': 'normal', 
                 'nameOfCallerFunction': 'addParameter',
                 'message': `${newKey} - ${newValue}`
             })
@@ -231,10 +235,10 @@ function HandlerForEditingObject(data, script){
         else {
             for (let i = 0; i < mixedData.length; i++){
                 data[mixedKeys[i]] = params.target.value
-                let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, params.target.value)
+                let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
 
                 this.addMessage({
-                    'typeOfMessage': 'withoutError', 
+                    'typeOfMessage': 'normal', 
                     'nameOfCallerFunction': 'addParameter',
                     'message': `${newKey[i]} - ${newValue[i]}`
                 })
@@ -243,11 +247,11 @@ function HandlerForEditingObject(data, script){
     }
     
     this.searchAndView = function(params){
-        let [mixedData , mixedKeys, mixedValues] = this.findingAndChoosingRightPath(params)
+        let [mixedData , mixedKeys, mixedValues] = this.findingAndChoosingRightPath(params, false)
 
         if (!params.target.path.includes(ENV.allArray)){
             this.addMessage({
-                'typeOfMessage': 'withoutError', 
+                'typeOfMessage': 'normal', 
                 'nameOfCallerFunction': 'searchAndView',
                 'message': `${mixedKeys} - ${mixedValues}`
             })
@@ -255,7 +259,7 @@ function HandlerForEditingObject(data, script){
         else {
             for (let i = 0; i < mixedData.length; i++){
                 this.addMessage({
-                    'typeOfMessage': 'withoutError', 
+                    'typeOfMessage': 'normal', 
                     'nameOfCallerFunction': 'searchAndView',
                     'message': `${mixedKeys[i]} - ${mixedValues[i]}`
                 })
@@ -264,14 +268,14 @@ function HandlerForEditingObject(data, script){
     }
 
     this.searchAndChange = function(params){
-        let [mixedData , mixedKeys] = this.findingAndChoosingRightPath(params)
+        let [mixedData, mixedKeys] = this.findingAndChoosingRightPath(params, false)
 
         if (!params.target.path.includes(ENV.allArray)){
             mixedData[mixedKeys] = params.target.value
-            let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
+            let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
 
             this.addMessage({
-                'typeOfMessage': 'withoutError', 
+                'typeOfMessage': 'normal', 
                 'nameOfCallerFunction': 'searchAndChange',
                 'message': `${newKey} - ${newValue}`
             })
@@ -279,10 +283,10 @@ function HandlerForEditingObject(data, script){
         else {
             for (let i = 0; i < mixedData.length; i++){
                 mixedData[mixedKeys[i]] = params.target.value
-                let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
+                let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
 
                 this.addMessage({
-                    'typeOfMessage': 'withoutError', 
+                    'typeOfMessage': 'normal', 
                     'nameOfCallerFunction': 'searchAndChange',
                     'message': `${newKey[i]} - ${newValue[i]}`
                 })
@@ -291,7 +295,7 @@ function HandlerForEditingObject(data, script){
     }
 
     this.searchAndDelete = function(params){
-        let [mixedData , mixedKeys] = this.findingAndChoosingRightPath(params)
+        let [mixedData , mixedKeys] = this.findingAndChoosingRightPath(params, false)
 
         if (!params.target.path.includes(ENV.allArray)){
             this.deleteProcess(mixedData, mixedKeys)
@@ -303,13 +307,41 @@ function HandlerForEditingObject(data, script){
         }
     }
 
-    this.objectHandler = function(data, paths, toCreateKey){
+    this.searchAndAdd = function(params){
+        // Добавляем в target 
+        let [mixedData, mixedKeys] = this.findingAndChoosingRightPath(params, true)
+
+        if (!params.target.path.includes(ENV.allArray)){
+            mixedData[mixedKeys] = params.target.value
+            let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
+
+            this.addMessage({
+                'typeOfMessage': 'normal', 
+                'nameOfCallerFunction': 'searchAndChange',
+                'message': `${newKey} - ${newValue}`
+            })
+        }
+        else {
+            for (let i = 0; i < mixedData.length; i++){
+                mixedData[mixedKeys[i]] = params.target.value
+                let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
+
+                this.addMessage({
+                    'typeOfMessage': 'normal', 
+                    'nameOfCallerFunction': 'searchAndChange',
+                    'message': `${newKey[i]} - ${newValue[i]}`
+                })
+            }
+        }
+    }
+
+    this.objectHandler = function(data, paths, shouldAdd){
         let currentData = data
         let value
         
         for (const key of paths) {
             if (!currentData.hasOwnProperty(key)) {
-                if (key === toCreateKey){
+                if (key === paths[paths.length - 1] && shouldAdd === true){
                     currentData[key] = ''
                     value = currentData[key]
 
@@ -364,17 +396,17 @@ function HandlerForEditingObject(data, script){
         return result
     }
 
-    this.performDataAnalysisAndSelectMethod = function(data, paths, toCreateKey){
+    this.performDataAnalysisAndSelectMethod = function(data, paths, shouldAdd){
         let [mixedData, mixedKeys, mixedValues] = [[], [], []]
 
         if (!paths.includes(ENV.allArray)){
-            [mixedData, mixedKeys, mixedValues] =  this.objectHandler(data, paths, toCreateKey)
+            [mixedData, mixedKeys, mixedValues] =  this.objectHandler(data, paths, shouldAdd)
         }
         else {
             let variationsOfPathElement = this.preparingPathsWithoutAll(data, paths)
 
             for (let newPaths of variationsOfPathElement){
-                let [newData, newKeys, newValues] = this.objectHandler(data, newPaths, toCreateKey)
+                let [newData, newKeys, newValues] = this.objectHandler(data, newPaths, shouldAdd)
                 mixedData.push(newData)
                 mixedKeys.push(newKeys)
                 mixedValues.push(newValues)
@@ -388,27 +420,22 @@ function HandlerForEditingObject(data, script){
   
         for (let operator of scriptOperatorsArray){
         // Перебираем все операторы сценария
-            try{
-                if (!ENV.operatorsData.operators.includes(operator)){
-                    this.addMessage({
-                        'typeOfMessage': 'warning', 
-                        'message': `${operator} - Недопустимый тип оператора!`})
-                }
-                else{
-                // Перебираем список объектов с параметрами сценария
-
-
-                // Сюда перенести try / catch
+            if (!ENV.operatorsData.operators.includes(operator)){
+                this.addMessage({
+                    'typeOfMessage': 'warning', 
+                    'message': `${operator} - Недопустимый тип оператора!`})                }
+            else {
+                try {
                     for (let item of this.script[operator]){
                         this[operator](this.preparingParameters(item, operator))
                     }
                 }
-            }
-            catch (error){
-                this.addMessage({ 
-                    'typeOfMessage':'error',
-                    'nameOfCallerFunction': 'operatorsMainFactory',
-                    'message': `${error.constructor.name}: ${error.message}`})
+                catch (error){
+                    this.addMessage({ 
+                        'typeOfMessage':'error',
+                        'nameOfCallerFunction': 'operatorsMainFactory',
+                        'message': `${error.constructor.name}: ${error.message}`})
+                }
             }
         }
     }
@@ -433,93 +460,93 @@ module.exports = {
 
 
 
-let body = {
-    "first": {
-        "second": {
-            "trigger": "searchValue",
-            "third": {
-                "ChangingParameter": "value"
-            }
-        },
-        'secondArray': [
-            {
-                "changeThis": 12
-            },
-            {
-                "changeThis": 15
-            }
-        ]
-    } 
-}
+// let body = {
+//     "first": {
+//         "second": {
+//             "trigger": "searchValue",
+//             "third": {
+//                 "ChangingParameter": "value"
+//             }
+//         },
+//         'secondArray': [
+//             {
+//                 "changeThis": 12
+//             },
+//             {
+//                 "changeThis": 15
+//             }
+//         ]
+//     } 
+// }
 
-let script = {
-    'searchAndChange': [
-        {
-            'target': {
-                path : ['first', 'second', 'third', 'ChangingParameter'],
-                value: 'newValue'
-            },
-            'trigger': {
-                path: ['first', 'second', 'trigger'],
-                value: 'searchValue'
-            }
-        }
-    ],
-    'deleteParameter': [
-        {
-            'target': {
-                path: ['first', '@all', 'changeThis'],
-                // value: 99
-            }
-        },
-        {
-            'target': {
-                path: ['first', 'second', 'trigger'],
-                // value: 'newValue'
-            }
-        }
-    ]
-}
+// let script = {
+//     'searchAndChange': [
+//         {
+//             'target': {
+//                 path : ['first', 'second', 'third', 'ChangingParameter'],
+//                 value: 'newValue'
+//             },
+//             'trigger': {
+//                 path: ['first', 'second', 'trigger'],
+//                 value: 'searchValue'
+//             }
+//         }
+//     ],
+//     'deleteParameter': [
+//         {
+//             'target': {
+//                 path: ['first', 'secondArray', '@all', 'changeThis'],
+//                 // value: 99
+//             }
+//         },
+//         {
+//             'target': {
+//                 path: ['first', 'second', 'trigger'],
+//                 // value: 'newValue'
+//             }
+//         }
+//     ]
+// }
 
-let trueAnswer = {
-    'newData':{
-        "first": {
-            "second": {
-                // "trigger": "searchValue",
-                "third": {
-                    "ChangingParameter": "newValue"
-                }
-            },
-            'secondArray': [{}, {}]
-        }
-    }, 
-    "comment": [
-        'searchAndChange: ChangingParameter - newValue',
-        'deleteParameter: changeThis - true',
-        'deleteParameter: changeThis - true',
-        'deleteParameter: trigger - true'
-    ],
-    'color': 'green'
+// let trueAnswer = {
+//     'newData':{
+//         "first": {
+//             "second": {
+//                 // "trigger": "searchValue",
+//                 "third": {
+//                     "ChangingParameter": "newValue"
+//                 }
+//             },
+//             'secondArray': [{}, {}]
+//         }
+//     }, 
+//     "comment": [
+//         'searchAndChange: ChangingParameter - newValue',
+//         'deleteParameter: changeThis - true',
+//         'deleteParameter: changeThis - true',
+//         'deleteParameter: trigger - true'
+//     ],
+//     'color': 'green'
      
-}
+// }
 
-let test = new HandlerForEditingObject(body, script)
-let result = test.getResult()
+// let test = new HandlerForEditingObject(body, script)
+// let result = test.getResult()
 
-function startCheck() {
-    let answer = result
-        isEqual = JSON.stringify(answer) === JSON.stringify(trueAnswer);
+// function startCheck() {
+//     let answer = result
+//         isEqual = JSON.stringify(answer) === JSON.stringify(trueAnswer);
 
 
-    if (isEqual) {
-        // console.log(`\nIt's your answer:\n\n`, answer, `\n`)
-        console.log(`GOOD JOB!\n`)
-    }
-    else {
-        console.log(`It's TRUE_ANSWER:\n\n`, trueAnswer, `\n`)
-        console.log(`\nIt's you answer:\n\n`, answer, `\n`)
-        console.log(`ARE YOU STUPID ?\n`)
-    }
-}
+//     if (isEqual) {
+//         // console.log(`\nIt's your answer:\n\n`, answer, `\n`)
+//         console.log(`GOOD JOB!\n`)
+//     }
+//     else {
+//         console.log(`It's TRUE_ANSWER:\n\n`, trueAnswer, `\n`)
+//         console.log(`\nIt's you answer:\n\n`, answer, `\n`)
+//         console.log(`ARE YOU STUPID ?\n`)
+//     }
+// }
 
-startCheck()
+// startCheck()
