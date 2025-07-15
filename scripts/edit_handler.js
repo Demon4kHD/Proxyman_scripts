@@ -13,9 +13,9 @@ const ENV = {
         ]
     },
     colors: {
-        'addMessageWithoutErrors': 'green',
-        'addWarningMessage': 'yellow',
-        'addErrorMessage': 'red'
+        'withoutError': 'green',
+        'warning': 'yellow',
+        'error': 'red'
     }
 }
 
@@ -28,21 +28,16 @@ function HandlerForEditingObject(data, script){
     this.messages = []
 
     this.addMessage = function(params){
-        if (params.typeOfMessage === 'addMessageWithoutErrors'){
+        console.log(params)
+        if (params.typeOfMessage === 'error'){
+            this.messages.push(`Ошибка возникла в ${params.nameOfCallerFunction}: ${params.message}`)}
+        else{
             this.messages.push(`${params.nameOfCallerFunction}: ${params.message}`)
-            this.addColor(ENV.colors[params.typeOfMessage])
         }
-        else if (params.typeOfMessage === 'addWarningMessage'){
-            this.messages.push(`${params.nameOfCallerFunction}: ${params.message}`)
-            this.addColor(ENV.colors[params.typeOfMessage])
-        }
-        else if (params.typeOfMessage === 'addMessageWithoutErrors'){
-            this.messages.push(
-                `---Critical Error---
-                Ошибка возникла в ${params.nameOfCallerFunction}
-                ${params.message}`)
-            this.addColor(ENV.colors[params.typeOfMessage])
-        }
+
+        console.log(ENV.colors[params.typeOfMessage])
+
+        this.addColor(ENV.colors[params.typeOfMessage])
     }
 
     this.getMessages = function(){
@@ -54,14 +49,14 @@ function HandlerForEditingObject(data, script){
     }
 
     this.getColor = function(){
-        if (this.colors.includes(ENV.colors.addErrorMessage)){
-            return ENV.colors.addErrorMessage
+        if (this.colors.includes(ENV.colors.error)){
+            return ENV.colors.error
         }
-        else if (this.colors.includes(ENV.colors.addWarningMessage)){
-            return ENV.colors.addWarningMessage
+        else if (this.colors.includes(ENV.colors.warning)){
+            return ENV.colors.warning
         }
         else {
-            return ENV.colors.addMessageWithoutErrors
+            return ENV.colors.withoutError
         }
     }
 
@@ -145,7 +140,7 @@ function HandlerForEditingObject(data, script){
 
         if (!params.target.path.includes(ENV.allArray)){
             this.addMessage({
-                'typeOfMessage': 'addMessageWithoutErrors', 
+                'typeOfMessage': 'withoutError', 
                 'nameOfCallerFunction': 'viewParams',
                 'message': `${mixedKeys} - ${mixedValues}`
             })
@@ -153,7 +148,7 @@ function HandlerForEditingObject(data, script){
         else {
             for (let i = 0; i < mixedData.length; i++){
                 this.addMessage({
-                    'typeOfMessage': 'addMessageWithoutErrors', 
+                    'typeOfMessage': 'withoutError', 
                     'nameOfCallerFunction': 'viewParams',
                     'message': `${mixedKeys[i]} - ${mixedValues[i]}`
                 })
@@ -169,7 +164,7 @@ function HandlerForEditingObject(data, script){
             let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
 
             this.addMessage({
-                'typeOfMessage': 'addMessageWithoutErrors', 
+                'typeOfMessage': 'withoutError', 
                 'nameOfCallerFunction': 'changeValue',
                 'message': `${newKey} - ${newValue}`
             })
@@ -180,7 +175,7 @@ function HandlerForEditingObject(data, script){
                 let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
 
                 this.addMessage({
-                    'typeOfMessage': 'addMessageWithoutErrors', 
+                    'typeOfMessage': 'withoutError', 
                     'nameOfCallerFunction': 'changeValue',
                     'message': `${newKey[i]} - ${newValue[i]}`
                 })
@@ -192,7 +187,7 @@ function HandlerForEditingObject(data, script){
         if (Array.isArray(data)){
             data.shift()
             this.addMessage({
-                'typeOfMessage': 'addMessageWithoutErrors', 
+                'typeOfMessage': 'withoutError', 
                 'nameOfCallerFunction': 'deleteParameter',
                 'message': `${key} - ${this.checkingForMissingDeletedParameter(data, key)}`
             })
@@ -200,7 +195,7 @@ function HandlerForEditingObject(data, script){
         else {
             delete data[key]
             this.addMessage({
-                'typeOfMessage': 'addMessageWithoutErrors', 
+                'typeOfMessage': 'withoutError', 
                 'nameOfCallerFunction': 'deleteParameter',
                 'message': `${key} - ${this.checkingForMissingDeletedParameter(data, key)}`
             })
@@ -228,7 +223,7 @@ function HandlerForEditingObject(data, script){
             let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, params.target.value)
 
             this.addMessage({
-                'typeOfMessage': 'addMessageWithoutErrors', 
+                'typeOfMessage': 'withoutError', 
                 'nameOfCallerFunction': 'addParameter',
                 'message': `${newKey} - ${newValue}`
             })
@@ -239,7 +234,7 @@ function HandlerForEditingObject(data, script){
                 let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, params.target.value)
 
                 this.addMessage({
-                    'typeOfMessage': 'addMessageWithoutErrors', 
+                    'typeOfMessage': 'withoutError', 
                     'nameOfCallerFunction': 'addParameter',
                     'message': `${newKey[i]} - ${newValue[i]}`
                 })
@@ -252,7 +247,7 @@ function HandlerForEditingObject(data, script){
 
         if (!params.target.path.includes(ENV.allArray)){
             this.addMessage({
-                'typeOfMessage': 'addMessageWithoutErrors', 
+                'typeOfMessage': 'withoutError', 
                 'nameOfCallerFunction': 'searchAndView',
                 'message': `${mixedKeys} - ${mixedValues}`
             })
@@ -260,14 +255,13 @@ function HandlerForEditingObject(data, script){
         else {
             for (let i = 0; i < mixedData.length; i++){
                 this.addMessage({
-                    'typeOfMessage': 'addMessageWithoutErrors', 
+                    'typeOfMessage': 'withoutError', 
                     'nameOfCallerFunction': 'searchAndView',
                     'message': `${mixedKeys[i]} - ${mixedValues[i]}`
                 })
             }
         }
     }
-    let t = ['searchAndChange', 'searchAndDelete']
 
     this.searchAndChange = function(params){
         let [mixedData , mixedKeys] = this.findingAndChoosingRightPath(params)
@@ -277,7 +271,7 @@ function HandlerForEditingObject(data, script){
             let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
 
             this.addMessage({
-                'typeOfMessage': 'addMessageWithoutErrors', 
+                'typeOfMessage': 'withoutError', 
                 'nameOfCallerFunction': 'searchAndChange',
                 'message': `${newKey} - ${newValue}`
             })
@@ -288,7 +282,7 @@ function HandlerForEditingObject(data, script){
                 let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path)
 
                 this.addMessage({
-                    'typeOfMessage': 'addMessageWithoutErrors', 
+                    'typeOfMessage': 'withoutError', 
                     'nameOfCallerFunction': 'searchAndChange',
                     'message': `${newKey[i]} - ${newValue[i]}`
                 })
@@ -323,7 +317,7 @@ function HandlerForEditingObject(data, script){
                 }
                 else {
                     this.addMessage({
-                        'typeOfMessage': 'addWarningMessage', 
+                        'typeOfMessage': 'warning', 
                         'nameOfCallerFunction': 'objectHandler',
                         'message':`Параметр ${key} не найден в изменяемом объекте. Проверь объект или сценарий!`
                     })
@@ -396,17 +390,25 @@ function HandlerForEditingObject(data, script){
         // Перебираем все операторы сценария
             try{
                 if (!ENV.operatorsData.operators.includes(operator)){
-                    this.addMessage({'typeOfMessage': 'addMessageWithoutErrors', 'message': `${operator} - Недопустимый тип оператора!`})
+                    this.addMessage({
+                        'typeOfMessage': 'warning', 
+                        'message': `${operator} - Недопустимый тип оператора!`})
                 }
                 else{
                 // Перебираем список объектов с параметрами сценария
+
+
+                // Сюда перенести try / catch
                     for (let item of this.script[operator]){
                         this[operator](this.preparingParameters(item, operator))
                     }
                 }
             }
             catch (error){
-                this.addMessage({'typeOfMessage': 'addErrorMessage', 'message': `${error.constructor.name}: ${error.message}`})
+                this.addMessage({ 
+                    'typeOfMessage':'error',
+                    'nameOfCallerFunction': 'operatorsMainFactory',
+                    'message': `${error.constructor.name}: ${error.message}`})
             }
         }
     }
@@ -466,7 +468,7 @@ let script = {
     'deleteParameter': [
         {
             'target': {
-                path: ['first', 'secondArray', '@all', 'changeThis'],
+                path: ['first', '@all', 'changeThis'],
                 // value: 99
             }
         },
@@ -503,8 +505,6 @@ let trueAnswer = {
 
 let test = new HandlerForEditingObject(body, script)
 let result = test.getResult()
-
-// console.log(result.newData.first)
 
 function startCheck() {
     let answer = result
