@@ -39,7 +39,13 @@ function HandlerForEditingObject(data, script){
     }
 
     this.getMessages = function(){
-        return this.messages
+        let result = ''
+
+        for (let comment of this.messages){
+            result += comment + '\n'
+        }
+
+        return result
     }
 
     this.addColor = function(color){
@@ -538,13 +544,13 @@ let script = {
         { 
             'target': {
                 'path': ['experiments','mobile_x5id_auth'], 
-                'value': 1
+                'value': 0
             }
         },
         {
             'target': {
                 'path': ['experiments', 'up_carousel_recommendations'], 
-                'value': 1
+                'value': 0
             },  
         }
     ]
