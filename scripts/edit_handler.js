@@ -80,8 +80,8 @@ function HandlerForEditingObject(data, script){
 
         // Добавляем value, если необходимо
         if (this.doesOperatorHaveValue(operator)){
-            if (!item || !item.target || !item.target.value){
-                throw new Error("Отсутствует target.value в параметрах")
+            if (!item || !item.target){
+                throw new Error("Отсутствует target в параметрах")
             }
 
             result.target.value = item.target.value
@@ -163,10 +163,10 @@ function HandlerForEditingObject(data, script){
     }
 
     this.changeValue = function(params){
-        let [mixedData , mixedKeys, ] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
+        let [mixedData , mixedKeys, ] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, true)
 
         if (!params.target.path.includes(ENV.allArray)){
-            data[mixedKeys] = params.target.value
+            mixedData[mixedKeys] = params.target.value
             let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
             this.addMessage({
                 'typeOfMessage': 'normal', 
@@ -176,7 +176,7 @@ function HandlerForEditingObject(data, script){
         }
         else {
             for (let i = 0; i < mixedData.length; i++){
-                data[mixedKeys[i]] = params.target.value
+                mixedData[mixedKeys[i]] = params.target.value
                 let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
                 this.addMessage({
                     'typeOfMessage': 'normal', 
@@ -223,7 +223,8 @@ function HandlerForEditingObject(data, script){
         let [mixedData , mixedKeys, ] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, true)
 
         if (!params.target.path.includes(ENV.allArray)){
-            data[mixedKeys] = params.target.value
+            mixedData[mixedKeys] = params.target.value
+            console.log(data[mixedKeys])
             let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
 
             this.addMessage({
@@ -234,7 +235,7 @@ function HandlerForEditingObject(data, script){
         }
         else {
             for (let i = 0; i < mixedData.length; i++){
-                data[mixedKeys[i]] = params.target.value
+                mixedData[mixedKeys[i]] = params.target.value
                 let [ , newKey, newValue] = this.performDataAnalysisAndSelectMethod(this.getData(), params.target.path, false)
 
                 this.addMessage({
@@ -342,8 +343,8 @@ function HandlerForEditingObject(data, script){
         for (const key of paths) {
             if (!currentData.hasOwnProperty(key)) {
                 if (key === paths[paths.length - 1] && shouldAdd === true){
-                    currentData[key] = ''
-                    value = currentData[key]
+                    currentData[key] = null
+                    value = null
 
                     return [currentData, key, value]
                 }
@@ -508,45 +509,88 @@ module.exports = {
 //     ]
 // }
 
-// let trueAnswer = {
-//     'newData':{
-//         "first": {
-//             "second": {
-//                 // "trigger": "searchValue",
-//                 "third": {
-//                     "ChangingParameter": "newValue"
-//                 }
-//             },
-//             'secondArray': [{}, {}]
-//         }
-//     }, 
-//     "comment": [
-//         'searchAndChange: ChangingParameter - newValue',
-//         'deleteParameter: changeThis - true',
-//         'deleteParameter: changeThis - true',
-//         'deleteParameter: trigger - true'
-//     ],
-//     'color': 'green'
+let body = {
+  "experiments": {
+    "PROMOCODE_INFORMER_2": 1,
+    "delivery_time_preselection": 1,
+    "express_goods_only_context_express": 1,
+    "hybrid_delivery_variant": 1,
+    "image_for_product_unavailable": 1,
+    "mobile_loyalty_enable": 1,
+    "mobile_x5id_auth": 1,
+    "new_screen_slots": 2,
+    "product_replacement_service_mobile_checkout": 1,
+    "product_replacement_service_mobile_product_details": 1,
+    "products_photo_mobile": 1,
+    "select_slots_in_cart": 1,
+    "service_fee_mobile": 1,
+    "session_antifraud_enabled": 1,
+    "two_promo_carousels_in_catalog_3": 1,
+    "upsell_recommend": 1
+  },
+  "entries": {
+    "feedback_short_shelf_enabled": false
+  }
+}
+
+let script = {
+    'changeValue': [
+        { 
+            'target': {
+                'path': ['experiments','mobile_x5id_auth'], 
+                'value': 1
+            }
+        },
+        {
+            'target': {
+                'path': ['experiments', 'up_carousel_recommendations'], 
+                'value': 1
+            },  
+        }
+    ]
+}
+
+let trueAnswer = {
+    'newData':{
+        "first": {
+            "second": {
+                // "trigger": "searchValue",
+                "third": {
+                    "ChangingParameter": "newValue"
+                }
+            },
+            'secondArray': [{}, {}]
+        }
+    }, 
+    "comment": [
+        'searchAndChange: ChangingParameter - newValue',
+        'deleteParameter: changeThis - true',
+        'deleteParameter: changeThis - true',
+        'deleteParameter: trigger - true'
+    ],
+    'color': 'green'
      
-// }
-
-// let test = new HandlerForEditingObject(body, script)
-// let result = test.getResult()
-
-// function startCheck() {
-//     let answer = result
-//         isEqual = JSON.stringify(answer) === JSON.stringify(trueAnswer);
+}
 
 
-//     if (isEqual) {
-//         // console.log(`\nIt's your answer:\n\n`, answer, `\n`)
-//         console.log(`GOOD JOB!\n`)
-//     }
-//     else {
-//         console.log(`It's TRUE_ANSWER:\n\n`, trueAnswer, `\n`)
-//         console.log(`\nIt's you answer:\n\n`, answer, `\n`)
-//         console.log(`ARE YOU STUPID ?\n`)
-//     }
-// }
 
-// startCheck()
+let test = new HandlerForEditingObject(body, script)
+let result = test.getResult()
+
+function startCheck() {
+    let answer = result
+        isEqual = JSON.stringify(answer) === JSON.stringify(trueAnswer);
+
+
+    if (isEqual) {
+        // console.log(`\nIt's your answer:\n\n`, answer, `\n`)
+        console.log(`GOOD JOB!\n`)
+    }
+    else {
+        console.log(`It's TRUE_ANSWER:\n\n`, trueAnswer, `\n`)
+        console.log(`\nIt's you answer:\n\n`, answer, `\n`)
+        console.log(`ARE YOU STUPID ?\n`)
+    }
+}
+
+startCheck()
