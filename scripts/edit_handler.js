@@ -888,7 +888,3 @@ function ScriptedModifier(data, script) {
 module.exports = {
     ScriptedModifier
 }
-
-let test = new ScriptedModifier({a: ''}, 'a')
-
-test.setComment()
